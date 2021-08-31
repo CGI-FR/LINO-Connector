@@ -22,42 +22,39 @@ public class Controller {
 	private DataSource datasource;
 
 	@GetMapping(path = "/tables", produces = MediaType.APPLICATION_JSON_VALUE)
-	public String getTables(@RequestParam(required = false) String schema) {
+	public String getTables(@RequestParam(required = false) String schema) throws SQLException {
 		StringBuilder result = new StringBuilder("{\"version\":\"v1\",\"tables\":[");
-		try {
-			Connection connection = datasource.getConnection();
-			DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-			String tablePrefix = "";
-			ResultSet resultSet = databaseMetaData.getTables(null, null, null, new String[] { "TABLE" });
-			while (resultSet.next()) {
-				String tableName = resultSet.getString("TABLE_NAME");
-				result.append(tablePrefix);
+		Connection connection = datasource.getConnection();
+		DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-				tablePrefix = ",";
-				result.append("{\"name\":\"");
-				result.append(tableName);
-				result.append("\",\"keys\":[");
+		String tablePrefix = "";
+		ResultSet resultSet = databaseMetaData.getTables(null, null, null, new String[] { "TABLE" });
+		while (resultSet.next()) {
+			String tableName = resultSet.getString("TABLE_NAME");
+			result.append(tablePrefix);
 
-				// primary keys
-				String pkPrefix = "";
-				ResultSet pkRs = databaseMetaData.getPrimaryKeys(null, schema, tableName);
-				while (pkRs.next()) {
-					String pkName = pkRs.getString("COLUMN_NAME");
-					result.append(pkPrefix);
-					pkPrefix = ",";
-					result.append("\"");
-					result.append(pkName);
-					result.append("\"");
-				}
+			tablePrefix = ",";
+			result.append("{\"name\":\"");
+			result.append(tableName);
+			result.append("\",\"keys\":[");
 
-				result.append("]}");
-
+			// primary keys
+			String pkPrefix = "";
+			ResultSet pkRs = databaseMetaData.getPrimaryKeys(null, schema, tableName);
+			while (pkRs.next()) {
+				String pkName = pkRs.getString("COLUMN_NAME");
+				result.append(pkPrefix);
+				pkPrefix = ",";
+				result.append("\"");
+				result.append(pkName);
+				result.append("\"");
 			}
-		} catch (SQLException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+
+			result.append("]}");
+
 		}
+
 		result.append("]}");
 		return result.toString();
 	}
