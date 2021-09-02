@@ -1,9 +1,13 @@
 package com.cgi.lino.connector.postgresql.controller;
 
+import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.util.Date;
 
 import javax.sql.DataSource;
 
@@ -11,10 +15,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -158,22 +164,79 @@ public class Controller {
 	}
 
 	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public String getData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName)
-			throws SQLException {
-		StringBuilder result = new StringBuilder("{");
+	public String getData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
+			@RequestBody(required = false) String filter) throws SQLException, JsonProcessingException {
+		StringBuilder result = new StringBuilder();
 
 		try (Connection connection = datasource.getConnection()) {
 
-			// TODO
-			result.append("\"table\":\"");
-			result.append(tableName);
-			result.append("\"");
+			PreparedStatement stmt = connection.prepareStatement("select * from " + tableName + " limit 1");
+			ResultSet rs = stmt.executeQuery();
 
-			result.append('}');
-			result.append(System.lineSeparator());
+			while (rs.next()) {
+				mapRow(rs, result);
+				result.append(System.lineSeparator());
+			}
+
+			// TODO filter
+//			result.append("\"table\":\"");
+//			result.append(tableName);
+//			result.append("\"");
+//
+//			if (filter != null) {
+//				result.append(",\"filter\":");
+//				result.append(filter.toString());
+//			}
+//
+//			result.append('}');
 		}
 
 		return result.toString();
+	}
+
+	private void mapRow(ResultSet rs, StringBuilder result) throws SQLException, JsonProcessingException {
+		ResultSetMetaData rsmd = rs.getMetaData();
+		int columnCount = rsmd.getColumnCount();
+
+		String separator = "";
+
+		result.append('{');
+		for (int index = 1; index <= columnCount; index++) {
+			String column = rsmd.getColumnName(index);
+			Object value = rs.getObject(column);
+
+			result.append(separator);
+			result.append("\"" + column + "\":");
+
+			separator = ",";
+
+			if (value == null) {
+				result.append("null");
+			} else if (value instanceof Integer) {
+				result.append(mapper.writeValueAsString((Integer) value));
+			} else if (value instanceof String) {
+				result.append(mapper.writeValueAsString((String) value));
+			} else if (value instanceof Boolean) {
+				result.append(mapper.writeValueAsString((Boolean) value));
+			} else if (value instanceof Date) {
+				result.append(mapper.writeValueAsString((Date) value));
+			} else if (value instanceof Long) {
+				result.append(mapper.writeValueAsString((Long) value));
+			} else if (value instanceof Double) {
+				result.append(mapper.writeValueAsString((Double) value));
+			} else if (value instanceof Float) {
+				result.append(mapper.writeValueAsString((Float) value));
+			} else if (value instanceof BigDecimal) {
+				result.append(mapper.writeValueAsString((BigDecimal) value));
+			} else if (value instanceof Byte) {
+				result.append(mapper.writeValueAsString((Byte) value));
+			} else if (value instanceof byte[]) {
+				result.append(mapper.writeValueAsString((byte[]) value));
+			} else {
+				result.append("\"Unmappable Type: " + value.getClass() + "\"");
+			}
+		}
+		result.append('}');
 	}
 
 }
