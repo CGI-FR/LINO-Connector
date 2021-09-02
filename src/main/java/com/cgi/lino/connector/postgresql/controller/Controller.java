@@ -10,6 +10,7 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -153,6 +154,25 @@ public class Controller {
 		}
 
 		result.append("]}");
+		return result.toString();
+	}
+
+	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_JSON_VALUE)
+	public String getData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName)
+			throws SQLException {
+		StringBuilder result = new StringBuilder("{");
+
+		try (Connection connection = datasource.getConnection()) {
+
+			// TODO
+			result.append("\"table\":\"");
+			result.append(tableName);
+			result.append("\"");
+
+			result.append('}');
+			result.append(System.lineSeparator());
+		}
+
 		return result.toString();
 	}
 
