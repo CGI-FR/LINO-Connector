@@ -1,5 +1,6 @@
 package com.cgi.lino.connector.postgresql.controller;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -8,6 +9,8 @@ import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.Iterator;
+import java.util.Map;
 
 import javax.sql.DataSource;
 
@@ -165,30 +168,51 @@ public class Controller {
 
 	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_JSON_VALUE)
 	public String getData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
-			@RequestBody(required = false) String filter) throws SQLException, JsonProcessingException {
+			@RequestBody(required = false) Map<String, Object> filter) throws SQLException, IOException {
 		StringBuilder result = new StringBuilder();
+
+		String where = "where 1=1";
+		int limit = 10;
+
+		if (filter != null) {
+			String filterWhere = (String) filter.get("where");
+			if (filterWhere != null && !filterWhere.isBlank()) {
+				where = "where " + filterWhere;
+			}
+
+			@SuppressWarnings("unchecked")
+			Map<String, Object> filterValues = (Map<String, Object>) filter.get("values");
+			for (Iterator<Map.Entry<String, Object>> iterator = filterValues.entrySet().iterator(); iterator
+					.hasNext();) {
+				Map.Entry<String, Object> filterValue = iterator.next();
+				if (filterValue.getValue() instanceof String) {
+					where = where + " and " + filterValue.getKey() + "='" + filterValue.getValue() + "'";
+				} else if (filterValue.getValue() instanceof Integer) {
+					where = where + " and " + filterValue.getKey() + "=" + filterValue.getValue();
+				} else {
+					System.err.println("Unsupported filter type : " + filterValue.getValue().getClass());
+				}
+			}
+
+			limit = (int) filter.get("limit");
+		}
+
+		String filterClause = where;
+		if (limit > 0) {
+			filterClause = filterClause + " limit " + limit;
+		}
+
+		System.out.println("from " + tableName + " " + filterClause);
 
 		try (Connection connection = datasource.getConnection()) {
 
-			PreparedStatement stmt = connection.prepareStatement("select * from " + tableName + " limit 1");
+			PreparedStatement stmt = connection.prepareStatement("select * from " + tableName + " " + filterClause);
 			ResultSet rs = stmt.executeQuery();
 
 			while (rs.next()) {
 				mapRow(rs, result);
 				result.append(System.lineSeparator());
 			}
-
-			// TODO filter
-//			result.append("\"table\":\"");
-//			result.append(tableName);
-//			result.append("\"");
-//
-//			if (filter != null) {
-//				result.append(",\"filter\":");
-//				result.append(filter.toString());
-//			}
-//
-//			result.append('}');
 		}
 
 		return result.toString();
