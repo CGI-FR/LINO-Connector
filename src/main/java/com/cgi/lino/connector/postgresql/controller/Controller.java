@@ -1,6 +1,7 @@
 package com.cgi.lino.connector.postgresql.controller;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -14,16 +15,20 @@ import java.util.Map;
 
 import javax.sql.DataSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -31,6 +36,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 @RestController
 @RequestMapping(path = "/api/v1")
 public class Controller {
+
+	private Logger logger = LoggerFactory.getLogger(Controller.class);
 
 	@Autowired
 	private DataSource datasource;
@@ -166,11 +173,10 @@ public class Controller {
 		return result.toString();
 	}
 
-	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_JSON_VALUE)
-	public String getData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
-			@RequestBody(required = false) Map<String, Object> filter) throws SQLException, IOException {
-		StringBuilder result = new StringBuilder();
-
+	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_NDJSON_VALUE)
+	public ResponseEntity<StreamingResponseBody> getData(@RequestParam(required = false) String schema,
+			@PathVariable("tableName") String tableName, @RequestBody(required = false) Map<String, Object> filter)
+			throws SQLException, IOException {
 		String where = "where 1=1";
 		int limit = 10;
 
@@ -190,77 +196,88 @@ public class Controller {
 				} else if (filterValue.getValue() instanceof Integer) {
 					where = where + " and " + filterValue.getKey() + "=" + filterValue.getValue();
 				} else {
-					System.err.println("Unsupported filter type : " + filterValue.getValue().getClass());
+					this.logger.error("Unsupported filter type : " + filterValue.getValue().getClass());
 				}
 			}
 
 			limit = (int) filter.get("limit");
 		}
 
-		String filterClause = where;
+		final String filterClause;
 		if (limit > 0) {
-			filterClause = filterClause + " limit " + limit;
+			filterClause = where + " limit " + limit;
+		} else {
+			filterClause = where;
 		}
 
-		System.out.println("from " + tableName + " " + filterClause);
+		mapper.getFactory().disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
 
-		try (Connection connection = datasource.getConnection()) {
+		this.logger.info("Select from " + tableName + " " + filterClause);
 
-			PreparedStatement stmt = connection.prepareStatement("select * from " + tableName + " " + filterClause);
-			ResultSet rs = stmt.executeQuery();
+		StreamingResponseBody stream = out -> {
+			try (Connection connection = datasource.getConnection()) {
 
-			while (rs.next()) {
-				mapRow(rs, result);
-				result.append(System.lineSeparator());
+				PreparedStatement stmt = connection.prepareStatement("select * from " + tableName + " " + filterClause);
+				ResultSet rs = stmt.executeQuery();
+
+				while (rs.next()) {
+					mapRow(rs, out);
+					out.write(System.lineSeparator().getBytes());
+					out.flush();
+				}
+			} catch (SQLException e) {
+				throw new IOException(e);
 			}
-		}
+		};
 
-		return result.toString();
+		return ResponseEntity.ok().header("Content-Disposition", "inline").body(stream);
 	}
 
-	private void mapRow(ResultSet rs, StringBuilder result) throws SQLException, JsonProcessingException {
+	private void mapRow(ResultSet rs, OutputStream result) throws SQLException, IOException {
 		ResultSetMetaData rsmd = rs.getMetaData();
 		int columnCount = rsmd.getColumnCount();
 
-		String separator = "";
+		byte[] separator = new byte[] {};
 
-		result.append('{');
+		result.write('{');
 		for (int index = 1; index <= columnCount; index++) {
 			String column = rsmd.getColumnName(index);
 			Object value = rs.getObject(column);
 
-			result.append(separator);
-			result.append("\"" + column + "\":");
+			result.write(separator);
+			result.write('"');
+			result.write(column.getBytes());
+			result.write("\":".getBytes());
 
-			separator = ",";
+			separator = ",".getBytes();
 
 			if (value == null) {
-				result.append("null");
+				result.write("null".getBytes());
 			} else if (value instanceof Integer) {
-				result.append(mapper.writeValueAsString((Integer) value));
+				mapper.writeValue(result, (Integer) value);
 			} else if (value instanceof String) {
-				result.append(mapper.writeValueAsString((String) value));
+				mapper.writeValue(result, (String) value);
 			} else if (value instanceof Boolean) {
-				result.append(mapper.writeValueAsString((Boolean) value));
+				mapper.writeValue(result, (Boolean) value);
 			} else if (value instanceof Date) {
-				result.append(mapper.writeValueAsString((Date) value));
+				mapper.writeValue(result, (Date) value);
 			} else if (value instanceof Long) {
-				result.append(mapper.writeValueAsString((Long) value));
+				mapper.writeValue(result, (Long) value);
 			} else if (value instanceof Double) {
-				result.append(mapper.writeValueAsString((Double) value));
+				mapper.writeValue(result, (Double) value);
 			} else if (value instanceof Float) {
-				result.append(mapper.writeValueAsString((Float) value));
+				mapper.writeValue(result, (Float) value);
 			} else if (value instanceof BigDecimal) {
-				result.append(mapper.writeValueAsString((BigDecimal) value));
+				mapper.writeValue(result, (BigDecimal) value);
 			} else if (value instanceof Byte) {
-				result.append(mapper.writeValueAsString((Byte) value));
+				mapper.writeValue(result, (Byte) value);
 			} else if (value instanceof byte[]) {
-				result.append(mapper.writeValueAsString((byte[]) value));
+				mapper.writeValue(result, (byte[]) value);
 			} else {
-				result.append("\"Unmappable Type: " + value.getClass() + "\"");
+				mapper.writeValue(result, "\"Unmappable Type: " + value.getClass() + "\"");
 			}
 		}
-		result.append('}');
+		result.write('}');
 	}
 
 }
