@@ -274,7 +274,7 @@ public class Controller {
 			} else if (value instanceof byte[]) {
 				mapper.writeValue(result, (byte[]) value);
 			} else {
-				mapper.writeValue(result, "\"Unmappable Type: " + value.getClass() + "\"");
+				mapper.writeValue(result, "Unmappable Type: " + value.getClass());
 			}
 		}
 		result.write('}');
