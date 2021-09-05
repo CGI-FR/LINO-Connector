@@ -178,7 +178,7 @@ public class Controller {
 			@PathVariable("tableName") String tableName, @RequestBody(required = false) Map<String, Object> filter)
 			throws SQLException, IOException {
 		String where = "where 1=1";
-		int limit = 10;
+		int limit = 0;
 
 		if (filter != null) {
 			String filterWhere = (String) filter.get("where");
