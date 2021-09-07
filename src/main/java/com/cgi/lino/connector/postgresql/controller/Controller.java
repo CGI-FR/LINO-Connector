@@ -23,6 +23,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.jdbc.core.ColumnMapRowMapper;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -178,6 +180,93 @@ public class Controller {
 	}
 
 	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_NDJSON_VALUE)
+	public ResponseEntity<StreamingResponseBody> pullData(@RequestParam(required = false) String schema,
+			@PathVariable("tableName") String tableName, @RequestBody(required = false) Map<String, Object> filter)
+			throws SQLException, IOException {
+		String where = "where 1=1";
+		int limit = 0;
+
+		if (filter != null) {
+			String filterWhere = (String) filter.get("where");
+			if (filterWhere != null && !filterWhere.isBlank()) {
+				where = "where " + filterWhere;
+			}
+
+			@SuppressWarnings("unchecked")
+			Map<String, Object> filterValues = (Map<String, Object>) filter.get("values");
+			for (Iterator<Map.Entry<String, Object>> iterator = filterValues.entrySet().iterator(); iterator
+					.hasNext();) {
+				Map.Entry<String, Object> filterValue = iterator.next();
+				if (filterValue.getValue() instanceof String) {
+					where = where + " and " + filterValue.getKey() + "='" + filterValue.getValue() + "'";
+				} else if (filterValue.getValue() instanceof Integer) {
+					where = where + " and " + filterValue.getKey() + "=" + filterValue.getValue();
+				} else {
+					this.logger.error("Unsupported filter type : " + filterValue.getValue().getClass());
+				}
+			}
+
+			limit = (int) filter.get("limit");
+		}
+
+		final String filterClause;
+		if (limit > 0) {
+			filterClause = where + " limit " + limit;
+		} else {
+			filterClause = where;
+		}
+
+		mapper.getFactory().disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
+
+		this.logger.info("Select from " + tableName + " " + filterClause);
+
+		StreamingResponseBody stream = out -> {
+			try (Connection connection = datasource.getConnection()) {
+				JdbcTemplate query = new JdbcTemplate(datasource);
+				query.queryForStream("select * from " + tableName + " " + filterClause, new ColumnMapRowMapper())
+						.forEach(entry -> {
+							try {
+								mapper.writeValue(out, entry);
+								out.write(System.lineSeparator().getBytes());
+								out.flush();
+							} catch (IOException e) {
+								throw new RuntimeException(e);
+							}
+						});
+			} catch (SQLException e) {
+				throw new IOException(e);
+			}
+		};
+
+		return ResponseEntity.ok().header("Content-Disposition", "inline").body(stream);
+	}
+
+	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
+	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode,
+			@RequestParam(required = false) boolean disableConstraints, @PathVariable("tableName") String tableName,
+			InputStream data) throws SQLException, IOException {
+		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
+
+		Pusher pusher = Pusher.create(datasource, mapper, mode);
+
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(data))) {
+			String line;
+			do {
+				line = reader.readLine();
+				if (line != null) {
+					logger.info("Push " + tableName + " - received " + line);
+					pusher.push(line, tableName);
+				}
+			} while (line != null);
+		}
+
+		logger.info("Push " + tableName + " - closing connection");
+	}
+
+	///// OLD METHOD FOR PULL DATA
+	///// NO USE OF JDBCTEMPLATE BUT HANDLE MISSING JDBC TYPE MAPPING LIKE PGARRAY
+
+	@GetMapping(path = "/dataold/{tableName}", produces = MediaType.APPLICATION_NDJSON_VALUE)
 	public ResponseEntity<StreamingResponseBody> getData(@RequestParam(required = false) String schema,
 			@PathVariable("tableName") String tableName, @RequestBody(required = false) Map<String, Object> filter)
 			throws SQLException, IOException {
@@ -283,24 +372,6 @@ public class Controller {
 			}
 		}
 		result.write('}');
-	}
-
-	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
-	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode,
-			@RequestParam(required = false) boolean disableConstraints, @PathVariable("tableName") String tableName,
-			InputStream data) throws SQLException, IOException {
-		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
-
-		BufferedReader reader = new BufferedReader(new InputStreamReader(data));
-		String line;
-		do {
-			line = reader.readLine();
-			if (line != null) {
-				logger.info("Push " + tableName + " - received " + line);
-			}
-		} while (line != null);
-
-		logger.info("Push " + tableName + " - closing connection");
 	}
 
 }
