@@ -286,19 +286,21 @@ public class Controller {
 	}
 
 	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
-	public void pushData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
+	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode,
+			@RequestParam(required = false) boolean disableConstraints, @PathVariable("tableName") String tableName,
 			InputStream data) throws SQLException, IOException {
+		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
 
 		BufferedReader reader = new BufferedReader(new InputStreamReader(data));
 		String line;
 		do {
 			line = reader.readLine();
 			if (line != null) {
-				logger.info(tableName + " - received data " + line);
+				logger.info("Push " + tableName + " - received " + line);
 			}
 		} while (line != null);
 
-		logger.info(tableName + " - closing connection");
+		logger.info("Push " + tableName + " - closing connection");
 	}
 
 }
