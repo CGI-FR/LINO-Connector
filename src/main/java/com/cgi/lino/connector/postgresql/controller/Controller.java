@@ -285,7 +285,7 @@ public class Controller {
 		result.write('}');
 	}
 
-	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
 	public void pushData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
 			InputStream data) throws SQLException, IOException {
 
