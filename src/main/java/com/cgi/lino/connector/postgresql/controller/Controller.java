@@ -1,6 +1,9 @@
 package com.cgi.lino.connector.postgresql.controller;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.math.BigDecimal;
 import java.sql.Connection;
@@ -22,6 +25,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -216,7 +220,6 @@ public class Controller {
 
 		StreamingResponseBody stream = out -> {
 			try (Connection connection = datasource.getConnection()) {
-
 				PreparedStatement stmt = connection.prepareStatement("select * from " + tableName + " " + filterClause);
 				ResultSet rs = stmt.executeQuery();
 
@@ -263,6 +266,8 @@ public class Controller {
 				mapper.writeValue(result, (Date) value);
 			} else if (value instanceof Long) {
 				mapper.writeValue(result, (Long) value);
+			} else if (value instanceof Short) {
+				mapper.writeValue(result, (Short) value);
 			} else if (value instanceof Double) {
 				mapper.writeValue(result, (Double) value);
 			} else if (value instanceof Float) {
@@ -278,6 +283,22 @@ public class Controller {
 			}
 		}
 		result.write('}');
+	}
+
+	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+	public void pushData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
+			InputStream data) throws SQLException, IOException {
+
+		BufferedReader reader = new BufferedReader(new InputStreamReader(data));
+		String line;
+		do {
+			line = reader.readLine();
+			if (line != null) {
+				logger.info(tableName + " - received data " + line);
+			}
+		} while (line != null);
+
+		logger.info(tableName + " - closing connection");
 	}
 
 }
