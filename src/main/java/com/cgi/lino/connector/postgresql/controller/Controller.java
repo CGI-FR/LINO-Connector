@@ -55,22 +55,23 @@ public class Controller {
 	public ObjectNode getInfo() throws SQLException {
 		ObjectNode result = mapper.createObjectNode();
 
-		Connection connection = datasource.getConnection();
-		DatabaseMetaData databaseMetaData = connection.getMetaData();
+		try (Connection connection = datasource.getConnection()) {
+			DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-		ObjectNode database = mapper.createObjectNode();
-		database.put("product", databaseMetaData.getDatabaseProductName());
-		database.put("version", databaseMetaData.getDatabaseProductVersion());
-		result.set("database", database);
+			ObjectNode database = mapper.createObjectNode();
+			database.put("product", databaseMetaData.getDatabaseProductName());
+			database.put("version", databaseMetaData.getDatabaseProductVersion());
+			result.set("database", database);
 
-		ObjectNode driver = mapper.createObjectNode();
-		driver.put("name", databaseMetaData.getDriverName());
-		driver.put("version", databaseMetaData.getDriverVersion());
-		result.set("driver", driver);
+			ObjectNode driver = mapper.createObjectNode();
+			driver.put("name", databaseMetaData.getDriverName());
+			driver.put("version", databaseMetaData.getDriverVersion());
+			result.set("driver", driver);
 
-		ObjectNode jdbc = mapper.createObjectNode();
-		jdbc.put("version", databaseMetaData.getJDBCMajorVersion() + databaseMetaData.getJDBCMinorVersion());
-		result.set("jdbc", jdbc);
+			ObjectNode jdbc = mapper.createObjectNode();
+			jdbc.put("version", databaseMetaData.getJDBCMajorVersion() + databaseMetaData.getJDBCMinorVersion());
+			result.set("jdbc", jdbc);
+		}
 
 		return result;
 	}
@@ -79,20 +80,22 @@ public class Controller {
 	public ObjectNode getSchemas() throws SQLException {
 		ObjectNode result = mapper.createObjectNode();
 
-		Connection connection = datasource.getConnection();
-		DatabaseMetaData databaseMetaData = connection.getMetaData();
+		try (Connection connection = datasource.getConnection()) {
+			DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-		ArrayNode schemas = mapper.createArrayNode();
-		ResultSet schemasrs = databaseMetaData.getSchemas();
-		while (schemasrs.next()) {
-			String table_schem = schemasrs.getString("TABLE_SCHEM");
-			String table_catalog = schemasrs.getString("TABLE_CATALOG");
-			ObjectNode schema = mapper.createObjectNode();
-			schema.put("name", table_schem);
-			schema.put("catalog", table_catalog);
-			schemas.add(schema);
+			ArrayNode schemas = mapper.createArrayNode();
+			try (ResultSet schemasrs = databaseMetaData.getSchemas()) {
+				while (schemasrs.next()) {
+					String table_schem = schemasrs.getString("TABLE_SCHEM");
+					String table_catalog = schemasrs.getString("TABLE_CATALOG");
+					ObjectNode schema = mapper.createObjectNode();
+					schema.put("name", table_schem);
+					schema.put("catalog", table_catalog);
+					schemas.add(schema);
+				}
+			}
+			result.set("schemas", schemas);
 		}
-		result.set("schemas", schemas);
 
 		return result;
 	}
@@ -101,34 +104,36 @@ public class Controller {
 	public String getTables(@RequestParam(required = false) String schema) throws SQLException {
 		StringBuilder result = new StringBuilder("{\"version\":\"v1\",\"tables\":[");
 
-		Connection connection = datasource.getConnection();
-		DatabaseMetaData databaseMetaData = connection.getMetaData();
+		try (Connection connection = datasource.getConnection()) {
+			DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-		String tablePrefix = "";
-		ResultSet resultSet = databaseMetaData.getTables(null, schema, null, new String[] { "TABLE" });
-		while (resultSet.next()) {
-			String tableName = resultSet.getString("TABLE_NAME");
-			result.append(tablePrefix);
+			String tablePrefix = "";
+			try (ResultSet resultSet = databaseMetaData.getTables(null, schema, null, new String[] { "TABLE" })) {
+				while (resultSet.next()) {
+					String tableName = resultSet.getString("TABLE_NAME");
+					result.append(tablePrefix);
 
-			tablePrefix = ",";
-			result.append("{\"name\":\"");
-			result.append(tableName);
-			result.append("\",\"keys\":[");
+					tablePrefix = ",";
+					result.append("{\"name\":\"");
+					result.append(tableName);
+					result.append("\",\"keys\":[");
 
-			// primary keys
-			String pkPrefix = "";
-			ResultSet pkRs = databaseMetaData.getPrimaryKeys(null, schema, tableName);
-			while (pkRs.next()) {
-				String pkName = pkRs.getString("COLUMN_NAME");
-				result.append(pkPrefix);
-				pkPrefix = ",";
-				result.append("\"");
-				result.append(pkName);
-				result.append("\"");
+					// primary keys
+					String pkPrefix = "";
+					try (ResultSet pkRs = databaseMetaData.getPrimaryKeys(null, schema, tableName)) {
+						while (pkRs.next()) {
+							String pkName = pkRs.getString("COLUMN_NAME");
+							result.append(pkPrefix);
+							pkPrefix = ",";
+							result.append("\"");
+							result.append(pkName);
+							result.append("\"");
+						}
+					}
+
+					result.append("]}");
+				}
 			}
-
-			result.append("]}");
-
 		}
 
 		result.append("]}");
@@ -139,39 +144,41 @@ public class Controller {
 	public String getRelations(@RequestParam(required = false) String schema) throws SQLException {
 		StringBuilder result = new StringBuilder("{\"version\":\"v1\",\"relations\":[");
 
-		Connection connection = datasource.getConnection();
-		DatabaseMetaData databaseMetaData = connection.getMetaData();
+		try (Connection connection = datasource.getConnection()) {
+			DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-		String fkPrefix = "";
-		ResultSet resultSet = databaseMetaData.getTables(null, schema, null, new String[] { "TABLE" });
-		while (resultSet.next()) {
-			String tableName = resultSet.getString("TABLE_NAME");
+			String fkPrefix = "";
+			try (ResultSet resultSet = databaseMetaData.getTables(null, schema, null, new String[] { "TABLE" })) {
+				while (resultSet.next()) {
+					String tableName = resultSet.getString("TABLE_NAME");
 
-			ResultSet fkSet = databaseMetaData.getImportedKeys(null, schema, tableName);
-			while (fkSet.next()) {
-				String fkName = fkSet.getString("FK_NAME");
-				result.append(fkPrefix);
+					try (ResultSet fkSet = databaseMetaData.getImportedKeys(null, schema, tableName)) {
+						while (fkSet.next()) {
+							String fkName = fkSet.getString("FK_NAME");
+							result.append(fkPrefix);
 
-				fkPrefix = ",";
-				result.append("{\"name\":\"");
-				result.append(fkName);
+							fkPrefix = ",";
+							result.append("{\"name\":\"");
+							result.append(fkName);
 
-				// parent table
-				result.append("\",\"parent\":{\"name\":\"");
-				result.append(fkSet.getString("PKTABLE_NAME"));
-				result.append("\",\"keys\":[\"");
-				result.append(fkSet.getString("PKCOLUMN_NAME"));
-				result.append("\"]");
+							// parent table
+							result.append("\",\"parent\":{\"name\":\"");
+							result.append(fkSet.getString("PKTABLE_NAME"));
+							result.append("\",\"keys\":[\"");
+							result.append(fkSet.getString("PKCOLUMN_NAME"));
+							result.append("\"]");
 
-				// child table
-				result.append("},\"child\":{\"name\":\"");
-				result.append(tableName);
-				result.append("\",\"keys\":[\"");
-				result.append(fkSet.getString("FKCOLUMN_NAME"));
-				result.append("\"]");
+							// child table
+							result.append("},\"child\":{\"name\":\"");
+							result.append(tableName);
+							result.append("\",\"keys\":[\"");
+							result.append(fkSet.getString("FKCOLUMN_NAME"));
+							result.append("\"]");
 
-				result.append("}}");
-
+							result.append("}}");
+						}
+					}
+				}
 			}
 		}
 
