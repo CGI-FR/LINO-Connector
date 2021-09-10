@@ -23,8 +23,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.jdbc.core.ColumnMapRowMapper;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -228,18 +226,27 @@ public class Controller {
 		this.logger.info("Select from " + tableName + " " + filterClause);
 
 		StreamingResponseBody stream = out -> {
-			try (Connection connection = datasource.getConnection()) {
-				JdbcTemplate query = new JdbcTemplate(datasource);
-				query.queryForStream("select * from " + tableName + " " + filterClause, new ColumnMapRowMapper())
-						.forEach(entry -> {
-							try {
-								mapper.writeValue(out, entry);
-								out.write(System.lineSeparator().getBytes());
-								out.flush();
-							} catch (IOException e) {
-								throw new RuntimeException(e);
-							}
-						});
+			// JdbcTemplate solution provokes connection pool depletion, cause unknown
+//			JdbcTemplate query = new JdbcTemplate(datasource);
+//			query.queryForStream("select * from " + tableName + " " + filterClause, new ColumnMapRowMapper())
+//					.forEach(entry -> {
+//						try {
+//							mapper.writeValue(out, entry);
+//							out.write(System.lineSeparator().getBytes());
+//							out.flush();
+//						} catch (IOException e) {
+//							throw new RuntimeException(e);
+//						}
+//					});
+			try (Connection connection = datasource.getConnection();
+					PreparedStatement stmt = connection
+							.prepareStatement("select * from " + tableName + " " + filterClause);
+					ResultSet rs = stmt.executeQuery()) {
+				while (rs.next()) {
+					mapRow(rs, out);
+					out.write(System.lineSeparator().getBytes());
+					out.flush();
+				}
 			} catch (SQLException e) {
 				throw new IOException(e);
 			}
