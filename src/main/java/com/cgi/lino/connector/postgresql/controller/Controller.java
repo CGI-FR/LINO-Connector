@@ -266,7 +266,7 @@ public class Controller {
 			disabler.disable(tableName);
 		}
 
-		Pusher pusher = Pusher.create(datasource, mapper, mode);
+		Pusher pusher = Pusher.create(datasource, mapper, mode, schema);
 
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(data))) {
 			String line;
