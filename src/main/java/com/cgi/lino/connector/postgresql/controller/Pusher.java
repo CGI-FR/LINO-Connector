@@ -1,6 +1,7 @@
 package com.cgi.lino.connector.postgresql.controller;
 
 import java.io.IOException;
+import java.sql.SQLException;
 
 import javax.sql.DataSource;
 
@@ -17,6 +18,6 @@ public interface Pusher {
 		}
 	}
 
-	void push(String jsonline, String tableName) throws IOException;
+	void push(String jsonline, String tableName) throws IOException, SQLException;
 
 }

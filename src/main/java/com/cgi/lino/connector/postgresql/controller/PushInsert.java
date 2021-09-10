@@ -1,6 +1,7 @@
 package com.cgi.lino.connector.postgresql.controller;
 
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -14,9 +15,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class PushInsert implements Pusher {
 
-	private final DataSource datasource;
+	protected final DataSource datasource;
 
-	private final ObjectMapper mapper;
+	protected final ObjectMapper mapper;
 
 	private final Pattern p = Pattern
 			.compile("^(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3}\\+\\d{2}:\\d{2})?Z?$");
@@ -27,7 +28,7 @@ public class PushInsert implements Pusher {
 	}
 
 	@Override
-	public void push(String jsonline, String tableName) throws IOException {
+	public void push(String jsonline, String tableName) throws IOException, SQLException {
 		@SuppressWarnings("unchecked")
 		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
 		SimpleJdbcInsert insert = new SimpleJdbcInsert(datasource).withTableName(tableName);
