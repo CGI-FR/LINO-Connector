@@ -247,6 +247,11 @@ public class Controller {
 			InputStream data) throws SQLException, IOException {
 		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
 
+		ConstraintDisabler disabler = new ConstraintDisabler(datasource);
+		if (disableConstraints) {
+			disabler.disable(tableName);
+		}
+
 		Pusher pusher = Pusher.create(datasource, mapper, mode);
 
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(data))) {
@@ -258,6 +263,10 @@ public class Controller {
 					pusher.push(line, tableName);
 				}
 			} while (line != null);
+		}
+
+		if (disableConstraints) {
+			disabler.enable(tableName);
 		}
 
 		logger.info("Push " + tableName + " - closing connection");
