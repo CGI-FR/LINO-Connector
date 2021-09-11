@@ -8,9 +8,10 @@ import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.text.ParseException;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
@@ -53,8 +54,7 @@ public class HibernateController {
 
 	private final ObjectMapper mapper;
 
-	public HibernateController(final DataSource datasource, final EntityManager entityManager,
-			final ObjectMapper mapper) {
+	public HibernateController(final DataSource datasource, final EntityManager entityManager, final ObjectMapper mapper) {
 		this.datasource = datasource;
 		this.entityManager = entityManager;
 		this.mapper = mapper;
@@ -198,13 +198,14 @@ public class HibernateController {
 	}
 
 	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_NDJSON_VALUE)
-	public ResponseEntity<StreamingResponseBody> pullData(@RequestParam(required = false) String schema,
-			@PathVariable("tableName") String tableName, @RequestBody(required = false) Map<String, Object> filter)
-			throws SQLException, IOException {
+	public ResponseEntity<StreamingResponseBody> pullData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
+			@RequestBody(required = false) Map<String, Object> filter) throws SQLException, IOException, ParseException {
+		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+
 		String where = "where 1=1";
 		int limit = 0;
 
-		List<Object> values = new ArrayList<>();
+		Collection<Object> values;
 		if (filter != null) {
 			String filterWhere = (String) filter.get("where");
 			if (filterWhere != null && !filterWhere.isBlank()) {
@@ -215,10 +216,12 @@ public class HibernateController {
 			Map<String, Object> filterValues = (Map<String, Object>) filter.get("values");
 			for (Map.Entry<String, Object> filterValue : filterValues.entrySet()) {
 				where = where + " and " + filterValue.getKey() + "=?";
-				values.add(filterValue.getValue());
 			}
+			values = accessor.cast(filterValues);
 
 			limit = (int) filter.get("limit");
+		} else {
+			values = Collections.emptyList();
 		}
 
 		final String filterClause;
@@ -265,9 +268,8 @@ public class HibernateController {
 
 	@Transactional
 	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
-	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode,
-			@RequestParam(required = false) boolean disableConstraints, @PathVariable("tableName") String tableName,
-			InputStream data) throws SQLException, IOException {
+	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode, @RequestParam(required = false) boolean disableConstraints,
+			@PathVariable("tableName") String tableName, InputStream data) throws SQLException, IOException, ParseException {
 		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
 
 		ConstraintDisabler disabler = new ConstraintDisabler(datasource);
@@ -281,7 +283,7 @@ public class HibernateController {
 				line = reader.readLine();
 				if (line != null) {
 					logger.info("Push " + tableName + " - received " + line);
-					pushInsert(line);
+					pushInsert(schema, tableName, line);
 				}
 			} while (line != null);
 		}
@@ -293,13 +295,14 @@ public class HibernateController {
 		logger.info("Push " + tableName + " - closing connection");
 	}
 
-	private void pushInsert(String jsonline) throws JsonMappingException, JsonProcessingException {
+	private void pushInsert(String schema, String tableName, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
 		@SuppressWarnings("unchecked")
 		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
 		int position = 0;
-		Query query = entityManager.createNativeQuery(
-				"insert into public.film_actor(\"actor_id\",\"film_id\",\"last_update\") values(?,?,?)");
-		for (Object value : object.values()) {
+		Query query = entityManager.createNativeQuery("insert into public.film_actor(\"actor_id\",\"film_id\",\"last_update\") values(?,?,?)");
+		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+		System.out.println(accessor);
+		for (Object value : accessor.cast(object)) {
 			query.setParameter(++position, value);
 		}
 		query.executeUpdate();
