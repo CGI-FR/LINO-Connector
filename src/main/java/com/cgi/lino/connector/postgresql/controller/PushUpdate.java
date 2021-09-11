@@ -3,6 +3,7 @@ package com.cgi.lino.connector.postgresql.controller;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -12,8 +13,6 @@ import java.util.List;
 import java.util.Map;
 
 import javax.sql.DataSource;
-
-import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,9 +43,11 @@ public class PushUpdate implements Pusher {
 		for (Iterator<Map.Entry<String, Object>> iterator = object.entrySet().iterator(); iterator.hasNext();) {
 			Map.Entry<String, Object> entry = iterator.next();
 			sqlString.append(keyword);
+			sqlString.append(entry.getKey());
 			sqlString.append("=?");
 			colNames.add(entry.getKey());
 			colValues.add(entry.getValue());
+			keyword = ", ";
 		}
 
 		List<String> pkNames = new ArrayList<>();
@@ -60,19 +61,23 @@ public class PushUpdate implements Pusher {
 				sqlString.append(keyword);
 				sqlString.append(pkName);
 				sqlString.append("=?");
-				keyword = " and ";
+				keyword = " AND ";
 				pkNames.add(pkName);
 			}
-		}
 
-		List<Object> pkValues = new ArrayList<>();
-		for (Iterator<String> iterator = pkNames.iterator(); iterator.hasNext();) {
-			String pkName = iterator.next();
-			pkValues.add(object.get(pkName));
+			System.out.println(sqlString.toString());
+			int i = 0;
+			try (PreparedStatement statement = connection.prepareStatement(sqlString.toString())) {
+				for (Iterator<Object> iterator = colValues.iterator(); iterator.hasNext();) {
+					Object value = iterator.next();
+					statement.setObject(++i, value);
+				}
+				for (Iterator<String> iterator = pkNames.iterator(); iterator.hasNext();) {
+					String pkName = iterator.next();
+					statement.setObject(++i, object.get(pkName));
+				}
+				statement.execute();
+			}
 		}
-
-		JdbcTemplate template = new JdbcTemplate(datasource);
-		template.update(sqlString.toString(), colValues.toArray(), pkValues.toArray());
 	}
-
 }

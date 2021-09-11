@@ -286,68 +286,6 @@ public class Controller {
 		logger.info("Push " + tableName + " - closing connection");
 	}
 
-	///// OLD METHOD FOR PULL DATA
-	///// NO USE OF JDBCTEMPLATE BUT HANDLE MISSING JDBC TYPE MAPPING LIKE PGARRAY
-
-	@GetMapping(path = "/dataold/{tableName}", produces = MediaType.APPLICATION_NDJSON_VALUE)
-	public ResponseEntity<StreamingResponseBody> getData(@RequestParam(required = false) String schema,
-			@PathVariable("tableName") String tableName, @RequestBody(required = false) Map<String, Object> filter)
-			throws SQLException, IOException {
-		String where = "where 1=1";
-		int limit = 0;
-
-		if (filter != null) {
-			String filterWhere = (String) filter.get("where");
-			if (filterWhere != null && !filterWhere.isBlank()) {
-				where = "where " + filterWhere;
-			}
-
-			@SuppressWarnings("unchecked")
-			Map<String, Object> filterValues = (Map<String, Object>) filter.get("values");
-			for (Iterator<Map.Entry<String, Object>> iterator = filterValues.entrySet().iterator(); iterator
-					.hasNext();) {
-				Map.Entry<String, Object> filterValue = iterator.next();
-				if (filterValue.getValue() instanceof String) {
-					where = where + " and " + filterValue.getKey() + "='" + filterValue.getValue() + "'";
-				} else if (filterValue.getValue() instanceof Integer) {
-					where = where + " and " + filterValue.getKey() + "=" + filterValue.getValue();
-				} else {
-					this.logger.error("Unsupported filter type : " + filterValue.getValue().getClass());
-				}
-			}
-
-			limit = (int) filter.get("limit");
-		}
-
-		final String filterClause;
-		if (limit > 0) {
-			filterClause = where + " limit " + limit;
-		} else {
-			filterClause = where;
-		}
-
-		mapper.getFactory().disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
-
-		this.logger.info("Select from " + tableName + " " + filterClause);
-
-		StreamingResponseBody stream = out -> {
-			try (Connection connection = datasource.getConnection()) {
-				PreparedStatement stmt = connection.prepareStatement("select * from " + tableName + " " + filterClause);
-				ResultSet rs = stmt.executeQuery();
-
-				while (rs.next()) {
-					mapRow(rs, out);
-					out.write(System.lineSeparator().getBytes());
-					out.flush();
-				}
-			} catch (SQLException e) {
-				throw new IOException(e);
-			}
-		};
-
-		return ResponseEntity.ok().header("Content-Disposition", "inline").body(stream);
-	}
-
 	private void mapRow(ResultSet rs, OutputStream result) throws SQLException, IOException {
 		ResultSetMetaData rsmd = rs.getMetaData();
 		int columnCount = rsmd.getColumnCount();
