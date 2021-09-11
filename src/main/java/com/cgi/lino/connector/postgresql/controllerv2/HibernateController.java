@@ -80,13 +80,18 @@ public class HibernateController {
 			filterClause = where;
 		}
 
-		this.logger.info("Select from " + tableName + " " + filterClause);
+		String query;
+		if (schema != null) {
+			query = "select * from " + schema + "." + tableName + " " + filterClause;
+		} else {
+			query = "select * from " + tableName + " " + filterClause;
+		}
+
+		this.logger.info(query);
 
 		StreamingResponseBody stream = out -> {
 			@SuppressWarnings("unchecked")
-			Stream<Tuple> result = entityManager
-					.createNativeQuery("select * from " + tableName + " " + filterClause, Tuple.class)
-					.getResultStream();
+			Stream<Tuple> result = entityManager.createNativeQuery(query, Tuple.class).getResultStream();
 			result.forEach(entry -> {
 				try {
 					Map<String, Object> resultItem = new HashMap<>();
