@@ -2,12 +2,15 @@ package com.cgi.lino.connector.postgresql.controllerv2;
 
 import java.io.IOException;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 import javax.persistence.Tuple;
 
 import org.slf4j.Logger;
@@ -50,6 +53,7 @@ public class HibernateController {
 		String where = "where 1=1";
 		int limit = 0;
 
+		List<Object> values = new ArrayList<>();
 		if (filter != null) {
 			String filterWhere = (String) filter.get("where");
 			if (filterWhere != null && !filterWhere.isBlank()) {
@@ -61,13 +65,8 @@ public class HibernateController {
 			for (Iterator<Map.Entry<String, Object>> iterator = filterValues.entrySet().iterator(); iterator
 					.hasNext();) {
 				Map.Entry<String, Object> filterValue = iterator.next();
-				if (filterValue.getValue() instanceof String) {
-					where = where + " and " + filterValue.getKey() + "='" + filterValue.getValue() + "'";
-				} else if (filterValue.getValue() instanceof Integer) {
-					where = where + " and " + filterValue.getKey() + "=" + filterValue.getValue();
-				} else {
-					this.logger.error("Unsupported filter type : " + filterValue.getValue().getClass());
-				}
+				where = where + " and " + filterValue.getKey() + "=?";
+				values.add(filterValue.getValue());
 			}
 
 			limit = (int) filter.get("limit");
@@ -80,18 +79,23 @@ public class HibernateController {
 			filterClause = where;
 		}
 
-		String query;
+		String querySql;
 		if (schema != null) {
-			query = "select * from " + schema + "." + tableName + " " + filterClause;
+			querySql = "select * from " + schema + "." + tableName + " " + filterClause;
 		} else {
-			query = "select * from " + tableName + " " + filterClause;
+			querySql = "select * from " + tableName + " " + filterClause;
 		}
 
-		this.logger.info(query);
+		this.logger.info(querySql);
 
 		StreamingResponseBody stream = out -> {
+			int position = 0;
+			Query query = entityManager.createNativeQuery(querySql, Tuple.class);
+			for (Object value : values) {
+				query.setParameter(++position, value);
+			}
 			@SuppressWarnings("unchecked")
-			Stream<Tuple> result = entityManager.createNativeQuery(query, Tuple.class).getResultStream();
+			Stream<Tuple> result = query.getResultStream();
 			result.forEach(entry -> {
 				try {
 					Map<String, Object> resultItem = new HashMap<>();
