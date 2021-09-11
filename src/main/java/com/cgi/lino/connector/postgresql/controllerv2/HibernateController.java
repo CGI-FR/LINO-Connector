@@ -1,6 +1,9 @@
 package com.cgi.lino.connector.postgresql.controllerv2;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
@@ -15,6 +18,7 @@ import javax.persistence.EntityManager;
 import javax.persistence.Query;
 import javax.persistence.Tuple;
 import javax.sql.DataSource;
+import javax.transaction.Transactional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -22,13 +26,17 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import com.cgi.lino.connector.postgresql.controller.ConstraintDisabler;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -253,5 +261,47 @@ public class HibernateController {
 		};
 
 		return ResponseEntity.ok().header("Content-Disposition", "inline").body(stream);
+	}
+
+	@Transactional
+	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
+	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode,
+			@RequestParam(required = false) boolean disableConstraints, @PathVariable("tableName") String tableName,
+			InputStream data) throws SQLException, IOException {
+		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
+
+		ConstraintDisabler disabler = new ConstraintDisabler(datasource);
+		if (disableConstraints) {
+			disabler.disable(tableName);
+		}
+
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(data))) {
+			String line;
+			do {
+				line = reader.readLine();
+				if (line != null) {
+					logger.info("Push " + tableName + " - received " + line);
+					pushInsert(line);
+				}
+			} while (line != null);
+		}
+
+		if (disableConstraints) {
+			disabler.enable(tableName);
+		}
+
+		logger.info("Push " + tableName + " - closing connection");
+	}
+
+	private void pushInsert(String jsonline) throws JsonMappingException, JsonProcessingException {
+		@SuppressWarnings("unchecked")
+		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
+		int position = 0;
+		Query query = entityManager.createNativeQuery(
+				"insert into public.film_actor(\"actor_id\",\"film_id\",\"last_update\") values(?,?,?)");
+		for (Object value : object.values()) {
+			query.setParameter(++position, value);
+		}
+		query.executeUpdate();
 	}
 }
