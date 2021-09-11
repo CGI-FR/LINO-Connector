@@ -7,7 +7,6 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -207,9 +206,7 @@ public class HibernateController {
 
 			@SuppressWarnings("unchecked")
 			Map<String, Object> filterValues = (Map<String, Object>) filter.get("values");
-			for (Iterator<Map.Entry<String, Object>> iterator = filterValues.entrySet().iterator(); iterator
-					.hasNext();) {
-				Map.Entry<String, Object> filterValue = iterator.next();
+			for (Map.Entry<String, Object> filterValue : filterValues.entrySet()) {
 				where = where + " and " + filterValue.getKey() + "=?";
 				values.add(filterValue.getValue());
 			}
@@ -231,7 +228,7 @@ public class HibernateController {
 			querySql = "select * from " + tableName + " " + filterClause;
 		}
 
-		this.logger.info(querySql);
+		this.logger.info("Pull " + tableName + " - " + querySql);
 
 		StreamingResponseBody stream = out -> {
 			int position = 0;
