@@ -52,15 +52,12 @@ public class HibernateController {
 			Stream<Tuple> result = entityManager.createNativeQuery("SELECT * FROM " + tableName, Tuple.class)
 					.getResultStream();
 			result.forEach(entry -> {
-				System.out.println("Hello!");
 				try {
 					Map<String, Object> resultItem = new HashMap<>();
 					entry.getElements().forEach(col -> {
 						resultItem.put(col.getAlias(), entry.get(col));
 					});
 					mapper.writeValue(out, resultItem);
-					System.out.println("Result!");
-					mapper.writeValue(System.out, resultItem);
 					out.write(System.lineSeparator().getBytes());
 					out.flush();
 				} catch (IOException e) {
