@@ -28,7 +28,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import com.cgi.lino.connector.postgresql.controller.Controller;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -38,7 +37,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 @RequestMapping(path = "/api/v2")
 public class HibernateController {
 
-	private Logger logger = LoggerFactory.getLogger(Controller.class);
+	private Logger logger = LoggerFactory.getLogger(HibernateController.class);
 
 	private final DataSource datasource;
 
