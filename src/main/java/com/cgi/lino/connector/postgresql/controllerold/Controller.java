@@ -38,7 +38,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @RestController
-@RequestMapping(path = "/api/v1")
+@RequestMapping(path = "/api/v1old")
 public class Controller {
 
 	private Logger logger = LoggerFactory.getLogger(Controller.class);

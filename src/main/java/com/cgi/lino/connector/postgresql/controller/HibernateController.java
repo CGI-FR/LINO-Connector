@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controllerv2;
+package com.cgi.lino.connector.postgresql.controller;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -42,7 +42,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 @RestController
-@RequestMapping(path = "/api/v2")
+@RequestMapping(path = "/api/v1")
 public class HibernateController {
 
 	private Logger logger = LoggerFactory.getLogger(HibernateController.class);

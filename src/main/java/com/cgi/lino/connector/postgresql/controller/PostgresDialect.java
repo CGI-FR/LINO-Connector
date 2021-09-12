@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controllerv2;
+package com.cgi.lino.connector.postgresql.controller;
 
 import java.util.Arrays;
 import java.util.Optional;
