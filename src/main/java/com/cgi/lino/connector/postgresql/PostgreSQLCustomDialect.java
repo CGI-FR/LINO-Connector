@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controllerv2;
+package com.cgi.lino.connector.postgresql;
 
 import java.sql.Types;
 

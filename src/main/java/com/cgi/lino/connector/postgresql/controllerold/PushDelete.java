@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controller;
+package com.cgi.lino.connector.postgresql.controllerold;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -16,7 +16,7 @@ import javax.sql.DataSource;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public class PushUpdate implements Pusher {
+public class PushDelete implements Pusher {
 
 	private final String schema;
 
@@ -24,7 +24,7 @@ public class PushUpdate implements Pusher {
 
 	protected final ObjectMapper mapper;
 
-	public PushUpdate(final DataSource datasource, final ObjectMapper mapper, final String schema) {
+	public PushDelete(final DataSource datasource, final ObjectMapper mapper, final String schema) {
 		this.datasource = datasource;
 		this.mapper = mapper;
 		this.schema = schema;
@@ -35,43 +35,24 @@ public class PushUpdate implements Pusher {
 		@SuppressWarnings("unchecked")
 		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
 
-		StringBuilder sqlString = new StringBuilder("UPDATE " + tableName);
-
-		String keyword = " SET ";
-		List<String> colNames = new ArrayList<>();
-		List<Object> colValues = new ArrayList<>();
-		for (Iterator<Map.Entry<String, Object>> iterator = object.entrySet().iterator(); iterator.hasNext();) {
-			Map.Entry<String, Object> entry = iterator.next();
-			sqlString.append(keyword);
-			sqlString.append(entry.getKey());
-			sqlString.append("=?");
-			colNames.add(entry.getKey());
-			colValues.add(entry.getValue());
-			keyword = ", ";
-		}
-
 		List<String> pkNames = new ArrayList<>();
+		StringBuilder sqlString = new StringBuilder("DELETE FROM " + tableName);
 		try (Connection connection = datasource.getConnection()) {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
 
-			keyword = " WHERE ";
+			String keyword = " WHERE ";
 			ResultSet pkRs = databaseMetaData.getPrimaryKeys(null, schema, tableName);
 			while (pkRs.next()) {
 				String pkName = pkRs.getString("COLUMN_NAME");
 				sqlString.append(keyword);
 				sqlString.append(pkName);
 				sqlString.append("=?");
-				keyword = " AND ";
+				keyword = " and ";
 				pkNames.add(pkName);
 			}
 
-			System.out.println(sqlString.toString());
 			int i = 0;
 			try (PreparedStatement statement = connection.prepareStatement(sqlString.toString())) {
-				for (Iterator<Object> iterator = colValues.iterator(); iterator.hasNext();) {
-					Object value = iterator.next();
-					statement.setObject(++i, value);
-				}
 				for (Iterator<String> iterator = pkNames.iterator(); iterator.hasNext();) {
 					String pkName = iterator.next();
 					statement.setObject(++i, object.get(pkName));
@@ -80,4 +61,5 @@ public class PushUpdate implements Pusher {
 			}
 		}
 	}
+
 }

@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controller;
+package com.cgi.lino.connector.postgresql.controllerold;
 
 import java.io.IOException;
 import java.sql.Connection;
@@ -23,8 +23,7 @@ public class PushTruncate extends PushInsert implements Pusher {
 	public void push(String jsonline, String tableName) throws IOException, SQLException {
 		if (!done.contains(tableName)) {
 			done.add(tableName);
-			try (Connection connection = datasource.getConnection();
-					Statement statement = connection.createStatement()) {
+			try (Connection connection = datasource.getConnection(); Statement statement = connection.createStatement()) {
 				statement.executeUpdate("TRUNCATE " + tableName + " CASCADE");
 			}
 		}

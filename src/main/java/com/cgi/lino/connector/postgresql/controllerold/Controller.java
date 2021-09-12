@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controller;
+package com.cgi.lino.connector.postgresql.controllerold;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -185,9 +185,8 @@ public class Controller {
 	}
 
 	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_NDJSON_VALUE)
-	public ResponseEntity<StreamingResponseBody> pullData(@RequestParam(required = false) String schema,
-			@PathVariable("tableName") String tableName, @RequestBody(required = false) Map<String, Object> filter)
-			throws SQLException, IOException {
+	public ResponseEntity<StreamingResponseBody> pullData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
+			@RequestBody(required = false) Map<String, Object> filter) throws SQLException, IOException {
 		String where = "where 1=1";
 		int limit = 0;
 
@@ -199,8 +198,7 @@ public class Controller {
 
 			@SuppressWarnings("unchecked")
 			Map<String, Object> filterValues = (Map<String, Object>) filter.get("values");
-			for (Iterator<Map.Entry<String, Object>> iterator = filterValues.entrySet().iterator(); iterator
-					.hasNext();) {
+			for (Iterator<Map.Entry<String, Object>> iterator = filterValues.entrySet().iterator(); iterator.hasNext();) {
 				Map.Entry<String, Object> filterValue = iterator.next();
 				if (filterValue.getValue() instanceof String) {
 					where = where + " and " + filterValue.getKey() + "='" + filterValue.getValue() + "'";
@@ -239,8 +237,7 @@ public class Controller {
 //						}
 //					});
 			try (Connection connection = datasource.getConnection();
-					PreparedStatement stmt = connection
-							.prepareStatement("select * from " + tableName + " " + filterClause);
+					PreparedStatement stmt = connection.prepareStatement("select * from " + tableName + " " + filterClause);
 					ResultSet rs = stmt.executeQuery()) {
 				while (rs.next()) {
 					mapRow(rs, out);
@@ -256,9 +253,8 @@ public class Controller {
 	}
 
 	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
-	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode,
-			@RequestParam(required = false) boolean disableConstraints, @PathVariable("tableName") String tableName,
-			InputStream data) throws SQLException, IOException {
+	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode, @RequestParam(required = false) boolean disableConstraints,
+			@PathVariable("tableName") String tableName, InputStream data) throws SQLException, IOException {
 		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
 
 		ConstraintDisabler disabler = new ConstraintDisabler(datasource);

@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controller;
+package com.cgi.lino.connector.postgresql.controllerold;
 
 import java.io.IOException;
 import java.sql.SQLException;
@@ -19,8 +19,7 @@ public class PushInsert implements Pusher {
 
 	protected final ObjectMapper mapper;
 
-	private final Pattern p = Pattern
-			.compile("^(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3,}\\+\\d{2}:\\d{2})?Z?$");
+	private final Pattern p = Pattern.compile("^(\\d{4}-\\d{2}-\\d{2})T\\d{2}:\\d{2}:\\d{2}(\\.\\d{3,}\\+\\d{2}:\\d{2})?Z?$");
 
 	public PushInsert(final DataSource datasource, final ObjectMapper mapper) {
 		this.datasource = datasource;
