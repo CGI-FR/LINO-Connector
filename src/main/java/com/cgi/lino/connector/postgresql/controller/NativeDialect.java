@@ -65,44 +65,44 @@ public interface NativeDialect {
 	 *         degrade to the use of select + update/insert, this performance is
 	 *         poor.
 	 */
-	default Optional<String> getUpsertStatement(String tableName, String[] fieldNames, String[] uniqueKeyFields) {
+	default Optional<String> getUpsertStatement(String schemaName, String tableName, String[] fieldNames, String[] uniqueKeyFields) {
 		return Optional.empty();
 	}
 
 	/**
 	 * Get row exists statement by condition fields. Default use SELECT.
 	 */
-	default String getRowExistsStatement(String tableName, String[] conditionFields) {
+	default String getRowExistsStatement(String schemaName, String tableName, String[] conditionFields) {
 		String fieldExpressions = Arrays.stream(conditionFields).map(f -> quoteIdentifier(f) + "=?").collect(Collectors.joining(" AND "));
-		return "SELECT 1 FROM " + quoteIdentifier(tableName) + " WHERE " + fieldExpressions;
+		return "SELECT 1 FROM " + quoteIdentifier(schemaName, tableName) + " WHERE " + fieldExpressions;
 	}
 
 	/**
 	 * Get insert into statement.
 	 */
-	default String getInsertIntoStatement(String tableName, String[] fieldNames) {
+	default String getInsertIntoStatement(String schemaName, String tableName, String[] fieldNames) {
 		String columns = Arrays.stream(fieldNames).map(this::quoteIdentifier).collect(Collectors.joining(", "));
 		String placeholders = Arrays.stream(fieldNames).map(f -> "?").collect(Collectors.joining(", "));
-		return "INSERT INTO " + quoteIdentifier(tableName) + "(" + columns + ")" + " VALUES (" + placeholders + ")";
+		return "INSERT INTO " + quoteIdentifier(schemaName, tableName) + "(" + columns + ")" + " VALUES (" + placeholders + ")";
 	}
 
 	/**
 	 * Get update one row statement by condition fields, default not use limit 1,
 	 * because limit 1 is a sql dialect.
 	 */
-	default String getUpdateStatement(String tableName, String[] fieldNames, String[] conditionFields) {
+	default String getUpdateStatement(String schemaName, String tableName, String[] fieldNames, String[] conditionFields) {
 		String setClause = Arrays.stream(fieldNames).map(f -> quoteIdentifier(f) + "=?").collect(Collectors.joining(", "));
 		String conditionClause = Arrays.stream(conditionFields).map(f -> quoteIdentifier(f) + "=?").collect(Collectors.joining(" AND "));
-		return "UPDATE " + quoteIdentifier(tableName) + " SET " + setClause + " WHERE " + conditionClause;
+		return "UPDATE " + quoteIdentifier(schemaName, tableName) + " SET " + setClause + " WHERE " + conditionClause;
 	}
 
 	/**
 	 * Get delete one row statement by condition fields, default not use limit 1,
 	 * because limit 1 is a sql dialect.
 	 */
-	default String getDeleteStatement(String tableName, String[] conditionFields) {
+	default String getDeleteStatement(String schemaName, String tableName, String[] conditionFields) {
 		String conditionClause = Arrays.stream(conditionFields).map(f -> quoteIdentifier(f) + "=?").collect(Collectors.joining(" AND "));
-		return "DELETE FROM " + quoteIdentifier(tableName) + " WHERE " + conditionClause;
+		return "DELETE FROM " + quoteIdentifier(schemaName, tableName) + " WHERE " + conditionClause;
 	}
 
 	/**
@@ -116,8 +116,8 @@ public interface NativeDialect {
 				+ (additionalCondition != null ? " AND " + additionalCondition : "");
 	}
 
-	default String getTruncateStatement(String tableName) {
-		return "TRUNCATE " + tableName + " CASCADE";
+	default String getTruncateStatement(String schemaName, String tableName) {
+		return "TRUNCATE " + quoteIdentifier(schemaName, tableName) + " CASCADE";
 	}
 
 }

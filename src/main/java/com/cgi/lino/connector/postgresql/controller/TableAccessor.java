@@ -141,7 +141,7 @@ public class TableAccessor {
 			int ordinate = this.columns.indexOf(fieldName);
 			fieldNamesOrdered.put(ordinate, fieldName);
 		}
-		return this.dialect.getInsertIntoStatement(this.getTableNameFull(), toArray(fieldNamesOrdered.values()));
+		return this.dialect.getInsertIntoStatement(this.schemaName, this.tableName, toArray(fieldNamesOrdered.values()));
 	}
 
 	public String getNativeQueryDelete(Collection<String> whereFieldNames) {
@@ -150,7 +150,7 @@ public class TableAccessor {
 			int ordinate = this.columns.indexOf(whereFieldName);
 			whereFieldNamesOrdered.put(ordinate, whereFieldName);
 		}
-		return this.dialect.getDeleteStatement(this.getTableNameFull(), toArray(whereFieldNamesOrdered.values()));
+		return this.dialect.getDeleteStatement(this.schemaName, this.tableName, toArray(whereFieldNamesOrdered.values()));
 	}
 
 	public String getNativeQueryUpdate(Collection<String> fieldNames, Collection<String> whereFieldNames) {
@@ -164,7 +164,7 @@ public class TableAccessor {
 			int ordinate = this.columns.indexOf(whereFieldName);
 			whereFieldNamesOrdered.put(ordinate, whereFieldName);
 		}
-		return this.dialect.getUpdateStatement(this.getTableNameFull(), toArray(fieldNamesOrdered.values()), toArray(whereFieldNamesOrdered.values()));
+		return this.dialect.getUpdateStatement(this.schemaName, this.tableName, toArray(fieldNamesOrdered.values()), toArray(whereFieldNamesOrdered.values()));
 	}
 
 	public String getTableNameFull() {

@@ -17,9 +17,9 @@ public class NativeDialectPostgres implements NativeDialect {
 	 * It use ON CONFLICT ... DO UPDATE SET.. to replace into Postgres.
 	 */
 	@Override
-	public Optional<String> getUpsertStatement(String tableName, String[] fieldNames, String[] uniqueKeyFields) {
+	public Optional<String> getUpsertStatement(String schemaName, String tableName, String[] fieldNames, String[] uniqueKeyFields) {
 		String uniqueColumns = Arrays.stream(uniqueKeyFields).map(this::quoteIdentifier).collect(Collectors.joining(", "));
 		String updateClause = Arrays.stream(fieldNames).map(f -> quoteIdentifier(f) + "=EXCLUDED." + quoteIdentifier(f)).collect(Collectors.joining(", "));
-		return Optional.of(getInsertIntoStatement(tableName, fieldNames) + " ON CONFLICT (" + uniqueColumns + ")" + " DO UPDATE SET " + updateClause);
+		return Optional.of(getInsertIntoStatement(schemaName, tableName, fieldNames) + " ON CONFLICT (" + uniqueColumns + ")" + " DO UPDATE SET " + updateClause);
 	}
 }
