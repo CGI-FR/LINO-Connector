@@ -296,12 +296,13 @@ public class HibernateController {
 	}
 
 	private void pushInsert(String schema, String tableName, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
+		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+
 		@SuppressWarnings("unchecked")
 		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
 		int position = 0;
-		Query query = entityManager.createNativeQuery("insert into public.film_actor(\"actor_id\",\"film_id\",\"last_update\") values(?,?,?)");
-		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
-		System.out.println(accessor);
+		Query query = entityManager.createNativeQuery(accessor.getNativeQueryInsert(object.keySet()));
+
 		for (Object value : accessor.cast(object)) {
 			query.setParameter(++position, value);
 		}

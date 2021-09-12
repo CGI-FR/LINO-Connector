@@ -16,21 +16,29 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import javax.persistence.Query;
 import javax.sql.DataSource;
+
+import org.apache.flink.api.java.io.jdbc.dialect.JDBCDialect;
+import org.apache.flink.api.java.io.jdbc.dialect.JDBCDialects;
 
 public class TableAccessor {
 
 	private final DataSource datasource;
+	private final JDBCDialect dialect;
 
+	private final String schemaName;
+	private final String tableName;
 	private final Map<String, ColumnDescriptor> columnDescriptors = new HashMap<>();
 	private final List<String> keys;
 	private final List<String> columns = new ArrayList<>();
 
 	public TableAccessor(final DataSource datasource, final String schemaName, final String tableName) throws SQLException {
 		this.datasource = datasource;
+		this.schemaName = schemaName;
+		this.tableName = tableName;
 		try (Connection connection = this.datasource.getConnection()) {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
+			this.dialect = JDBCDialects.get(databaseMetaData.getURL()).get();
 			try (ResultSet colRs = databaseMetaData.getColumns(null, schemaName, tableName, null)) {
 				while (colRs.next()) {
 					String columnName = colRs.getString("COLUMN_NAME");
@@ -67,10 +75,6 @@ public class TableAccessor {
 		return sb.toString();
 	}
 
-	public void parameterize(Query query, Map<String, Object> parameters) {
-
-	}
-
 	public Collection<Object> cast(Map<String, Object> columns) throws ParseException {
 		TreeMap<Integer, Object> result = new TreeMap<>();
 		for (Map.Entry<String, Object> column : columns.entrySet()) {
@@ -95,6 +99,22 @@ public class TableAccessor {
 			}
 		}
 		return result.values();
+	}
+
+	public String getNativeQueryInsert(Collection<String> fieldNames) {
+		String[] fieldNamesOrdered = new String[fieldNames.size()];
+		for (String fieldName : fieldNames) {
+			int ordinate = this.columns.indexOf(fieldName);
+			fieldNamesOrdered[ordinate] = fieldName;
+		}
+		return this.dialect.getInsertIntoStatement(this.getTableNameFull(), fieldNamesOrdered);
+	}
+
+	public String getTableNameFull() {
+		if (this.schemaName != null) {
+			return this.schemaName + "." + this.tableName;
+		}
+		return this.tableName;
 	}
 
 	public static class ColumnDescriptor {
