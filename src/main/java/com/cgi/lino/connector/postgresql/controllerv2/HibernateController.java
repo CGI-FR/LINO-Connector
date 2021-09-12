@@ -283,7 +283,13 @@ public class HibernateController {
 				line = reader.readLine();
 				if (line != null) {
 					logger.info("Push " + tableName + " - received " + line);
-					pushInsert(schema, tableName, line);
+					switch (mode) {
+					case "delete":
+						pushDelete(schema, tableName, line);
+						break;
+					default:
+						pushInsert(schema, tableName, line);
+					}
 				}
 			} while (line != null);
 		}
@@ -306,6 +312,22 @@ public class HibernateController {
 		for (Object value : accessor.cast(object)) {
 			query.setParameter(++position, value);
 		}
-		query.executeUpdate();
+		int nb = query.executeUpdate();
+		logger.info("  " + nb + " row(s) insert");
+	}
+
+	private void pushDelete(String schema, String tableName, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
+		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> object = accessor.keepPrimaryKeysOnly(mapper.readValue(jsonline, HashMap.class));
+		int position = 0;
+		Query query = entityManager.createNativeQuery(accessor.getNativeQueryDelete(object.keySet()));
+
+		for (Object value : accessor.cast(object)) {
+			query.setParameter(++position, value);
+		}
+		int nb = query.executeUpdate();
+		logger.info("  " + nb + " row(s) delete");
 	}
 }

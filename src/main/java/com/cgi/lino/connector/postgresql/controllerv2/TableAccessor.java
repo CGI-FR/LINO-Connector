@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -101,6 +102,18 @@ public class TableAccessor {
 		return result.values();
 	}
 
+	public Map<String, Object> keepPrimaryKeysOnly(Map<String, Object> columns) {
+//		System.out.println(Arrays.toString(columns.entrySet().toArray()));
+		for (Iterator<Map.Entry<String, Object>> it = columns.entrySet().iterator(); it.hasNext();) {
+			Map.Entry<String, Object> entry = it.next();
+			if (!this.keys.contains(entry.getKey())) {
+				it.remove();
+			}
+		}
+//		System.out.println(Arrays.toString(columns.entrySet().toArray()));
+		return columns;
+	}
+
 	public String getNativeQueryInsert(Collection<String> fieldNames) {
 		String[] fieldNamesOrdered = new String[fieldNames.size()];
 		for (String fieldName : fieldNames) {
@@ -108,6 +121,15 @@ public class TableAccessor {
 			fieldNamesOrdered[ordinate] = fieldName;
 		}
 		return this.dialect.getInsertIntoStatement(this.getTableNameFull(), fieldNamesOrdered);
+	}
+
+	public String getNativeQueryDelete(Collection<String> whereFieldNames) {
+		String[] whereFieldNamesOrdered = new String[whereFieldNames.size()];
+		for (String whereFieldName : whereFieldNames) {
+			int ordinate = this.columns.indexOf(whereFieldName);
+			whereFieldNamesOrdered[ordinate] = whereFieldName;
+		}
+		return this.dialect.getDeleteStatement(this.getTableNameFull(), whereFieldNamesOrdered);
 	}
 
 	public String getTableNameFull() {
