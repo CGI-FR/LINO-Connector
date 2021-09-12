@@ -219,7 +219,7 @@ public class HibernateController {
 		}
 
 		String querySql = accessor.getNativeQuerySelect(null, columns, filterWhere, limit);
-		this.logger.info("Pull " + tableName + " - " + querySql);
+		this.logger.info("Pull " + accessor.getTableNameFull() + " - " + querySql);
 
 		StreamingResponseBody stream = out -> {
 			int position = 0;
@@ -251,7 +251,9 @@ public class HibernateController {
 	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
 	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode, @RequestParam(required = false) boolean disableConstraints,
 			@PathVariable("tableName") String tableName, InputStream data) throws SQLException, IOException, ParseException {
-		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
+		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+
+		logger.info("Push " + accessor.getTableNameFull() + " - mode=" + mode + " disableConstraints=" + disableConstraints);
 
 //		ConstraintDisabler disabler = new ConstraintDisabler(datasource);
 //		if (disableConstraints) {
@@ -266,13 +268,13 @@ public class HibernateController {
 					logger.info("Push " + tableName + " - received " + line);
 					switch (mode) {
 					case "insert":
-						pushInsert(schema, tableName, line);
+						pushInsert(accessor, line);
 						break;
 					case "delete":
-						pushDelete(schema, tableName, line);
+						pushDelete(accessor, line);
 						break;
 					case "update":
-						pushUpdate(schema, tableName, line);
+						pushUpdate(accessor, line);
 						break;
 //					case "truncate":
 //						pushTruncate(schema, tableName, line);
@@ -291,8 +293,7 @@ public class HibernateController {
 		logger.info("Push " + tableName + " - closing connection");
 	}
 
-	private void pushInsert(String schema, String tableName, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
-		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+	private void pushInsert(TableAccessor accessor, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
 
 		@SuppressWarnings("unchecked")
 		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
@@ -306,9 +307,7 @@ public class HibernateController {
 		logger.info("  " + nb + " row(s) insert");
 	}
 
-	private void pushDelete(String schema, String tableName, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
-		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
-
+	private void pushDelete(TableAccessor accessor, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
 		@SuppressWarnings("unchecked")
 		Map<String, Object> object = accessor.keepPrimaryKeysOnly(mapper.readValue(jsonline, HashMap.class));
 		int position = 0;
@@ -321,9 +320,7 @@ public class HibernateController {
 		logger.info("  " + nb + " row(s) delete");
 	}
 
-	private void pushUpdate(String schema, String tableName, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
-		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
-
+	private void pushUpdate(TableAccessor accessor, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
 		@SuppressWarnings("unchecked")
 		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
 		Map<String, Object> values = accessor.removePrimaryKeys(object);
