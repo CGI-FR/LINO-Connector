@@ -1,10 +1,33 @@
 package com.cgi.lino.connector.postgresql.controller;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
 public interface NativeDialect {
+
+	static final List<NativeDialect> DIALECTS = Arrays.asList((NativeDialect) new NativeDialectPostgres());
+
+	/**
+	 * Fetch the JDBCDialect class corresponding to a given database url.
+	 */
+	public static Optional<NativeDialect> get(String url) {
+		for (NativeDialect dialect : DIALECTS) {
+			if (dialect.canHandle(url)) {
+				return Optional.of(dialect);
+			}
+		}
+		return Optional.empty();
+	}
+
+	/**
+	 * Check if this dialect instance can handle a certain jdbc url.
+	 * 
+	 * @param url the jdbc url.
+	 * @return True if the dialect can be applied on the given jdbc url.
+	 */
+	boolean canHandle(String url);
 
 	/**
 	 * Quotes the identifier. This is used to put quotes around the identifier in
@@ -72,6 +95,10 @@ public interface NativeDialect {
 		String selectExpressions = Arrays.stream(selectFields).map(this::quoteIdentifier).collect(Collectors.joining(", "));
 		String fieldExpressions = Arrays.stream(conditionFields).map(f -> quoteIdentifier(f) + "=?").collect(Collectors.joining(" AND "));
 		return "SELECT " + selectExpressions + " FROM " + quoteIdentifier(tableName) + (conditionFields.length > 0 ? " WHERE " + fieldExpressions : "");
+	}
+
+	default String getTruncateStatement(String tableName) {
+		return "TRUNCATE " + tableName + " CASCADE";
 	}
 
 }

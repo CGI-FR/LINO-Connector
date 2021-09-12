@@ -18,13 +18,10 @@ import java.util.TreeMap;
 
 import javax.sql.DataSource;
 
-import org.apache.flink.api.java.io.jdbc.dialect.JDBCDialect;
-import org.apache.flink.api.java.io.jdbc.dialect.JDBCDialects;
-
 public class TableAccessor {
 
 	private final DataSource datasource;
-	private final JDBCDialect dialect;
+	private final NativeDialect dialect;
 
 	private final String schemaName;
 	private final String tableName;
@@ -38,7 +35,7 @@ public class TableAccessor {
 		this.tableName = tableName;
 		try (Connection connection = this.datasource.getConnection()) {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
-			this.dialect = JDBCDialects.get(databaseMetaData.getURL()).get();
+			this.dialect = NativeDialect.get(databaseMetaData.getURL()).get();
 			try (ResultSet colRs = databaseMetaData.getColumns(null, schemaName, tableName, null)) {
 				while (colRs.next()) {
 					String columnName = colRs.getString("COLUMN_NAME");
