@@ -118,6 +118,23 @@ public class TableAccessor {
 		return result;
 	}
 
+	public String getNativeQuerySelect(Collection<String> fieldNames, Collection<String> whereFieldNames, String andWhere, int limit) {
+		if (fieldNames == null) {
+			fieldNames = this.columns;
+		}
+		Map<Integer, String> fieldNamesOrdered = new TreeMap<>();
+		for (String fieldName : fieldNames) {
+			int ordinate = this.columns.indexOf(fieldName);
+			fieldNamesOrdered.put(ordinate, fieldName);
+		}
+		Map<Integer, String> whereFieldNamesOrdered = new TreeMap<>();
+		for (String whereFieldName : whereFieldNames) {
+			int ordinate = this.columns.indexOf(whereFieldName);
+			whereFieldNamesOrdered.put(ordinate, whereFieldName);
+		}
+		return this.dialect.getSelectFromStatement(this.schemaName, this.tableName, toArray(fieldNamesOrdered.values()), toArray(whereFieldNamesOrdered.values()), andWhere, limit);
+	}
+
 	public String getNativeQueryInsert(Collection<String> fieldNames) {
 		Map<Integer, String> fieldNamesOrdered = new TreeMap<>();
 		for (String fieldName : fieldNames) {

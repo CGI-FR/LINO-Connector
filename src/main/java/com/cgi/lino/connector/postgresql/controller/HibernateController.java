@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import javax.persistence.EntityManager;
@@ -201,42 +202,23 @@ public class HibernateController {
 			@RequestBody(required = false) Map<String, Object> filter) throws SQLException, IOException, ParseException {
 		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
 
-		String where = "where 1=1";
 		int limit = 0;
-
+		String filterWhere = null;
 		Collection<Object> values;
+		Set<String> columns;
 		if (filter != null) {
-			String filterWhere = (String) filter.get("where");
-			if (filterWhere != null && !filterWhere.isBlank()) {
-				where = "where " + filterWhere;
-			}
-
 			@SuppressWarnings("unchecked")
 			Map<String, Object> filterValues = (Map<String, Object>) filter.get("values");
-			for (Map.Entry<String, Object> filterValue : filterValues.entrySet()) {
-				where = where + " and " + filterValue.getKey() + "=?";
-			}
+			filterWhere = (String) filter.get("where");
 			values = accessor.cast(filterValues);
-
+			columns = filterValues.keySet();
 			limit = (int) filter.get("limit");
 		} else {
 			values = Collections.emptyList();
+			columns = Set.of();
 		}
 
-		final String filterClause;
-		if (limit > 0) {
-			filterClause = where + " limit " + limit;
-		} else {
-			filterClause = where;
-		}
-
-		String querySql;
-		if (schema != null) {
-			querySql = "select * from " + schema + "." + tableName + " " + filterClause;
-		} else {
-			querySql = "select * from " + tableName + " " + filterClause;
-		}
-
+		String querySql = accessor.getNativeQuerySelect(null, columns, filterWhere, limit);
 		this.logger.info("Pull " + tableName + " - " + querySql);
 
 		StreamingResponseBody stream = out -> {

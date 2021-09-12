@@ -40,6 +40,23 @@ public interface NativeDialect {
 	}
 
 	/**
+	 * Quotes the identifier. This is used to put quotes around the identifier in
+	 * case the column name is a reserved keyword, or in case it contains characters
+	 * that require quotes (e.g. space). Default using double quotes {@code "} to
+	 * quote.
+	 */
+	default String quoteIdentifier(String schema, String identifier) {
+		return schema != null ? quoteIdentifier(schema) + "." + quoteIdentifier(identifier) : quoteIdentifier(identifier);
+	}
+
+	/**
+	 * Generate a limit clause.
+	 */
+	default String getLimitClause(int limit) {
+		return "LIMIT " + limit;
+	}
+
+	/**
 	 * Get dialect upsert statement, the database has its own upsert syntax, such as
 	 * Mysql using DUPLICATE KEY UPDATE, and PostgresSQL using ON CONFLICT... DO
 	 * UPDATE SET..
@@ -91,10 +108,12 @@ public interface NativeDialect {
 	/**
 	 * Get select fields statement by condition fields. Default use SELECT.
 	 */
-	default String getSelectFromStatement(String tableName, String[] selectFields, String[] conditionFields) {
+	default String getSelectFromStatement(String schemaName, String tableName, String[] selectFields, String[] conditionFields, String additionalCondition, int limit) {
 		String selectExpressions = Arrays.stream(selectFields).map(this::quoteIdentifier).collect(Collectors.joining(", "));
 		String fieldExpressions = Arrays.stream(conditionFields).map(f -> quoteIdentifier(f) + "=?").collect(Collectors.joining(" AND "));
-		return "SELECT " + selectExpressions + " FROM " + quoteIdentifier(tableName) + (conditionFields.length > 0 ? " WHERE " + fieldExpressions : "");
+		String limitExpression = (limit > 0) ? " " + this.getLimitClause(limit) : "";
+		return "SELECT " + selectExpressions + " FROM " + quoteIdentifier(schemaName, tableName) + (conditionFields.length > 0 ? " WHERE " + fieldExpressions : "") + limitExpression
+				+ (additionalCondition != null ? " AND " + additionalCondition : "");
 	}
 
 	default String getTruncateStatement(String tableName) {
