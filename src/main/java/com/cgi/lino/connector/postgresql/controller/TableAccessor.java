@@ -18,7 +18,12 @@ import java.util.TreeMap;
 
 import javax.sql.DataSource;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class TableAccessor {
+
+	private Logger logger = LoggerFactory.getLogger(TableAccessor.class);
 
 	private final DataSource datasource;
 	private final NativeDialect dialect;
@@ -77,22 +82,26 @@ public class TableAccessor {
 		for (Map.Entry<String, Object> column : columns.entrySet()) {
 			String columnName = column.getKey();
 			ColumnDescriptor descriptor = this.columnDescriptors.get(columnName);
-			int ordinate = this.columns.indexOf(columnName);
-			switch (descriptor.getType()) {
-			case Types.BIGINT:
-				result.put(ordinate, Long.decode(column.getValue().toString()));
-				break;
-			case Types.INTEGER:
-				result.put(ordinate, Integer.decode(column.getValue().toString()));
-				break;
-			case Types.SMALLINT:
-				result.put(ordinate, Short.decode(column.getValue().toString()));
-				break;
-			case Types.TIMESTAMP:
-				result.put(ordinate, LocalDateTime.parse(column.getValue().toString(), DateTimeFormatter.ISO_DATE_TIME));
-				break;
-			default:
-				result.put(ordinate, column.getValue());
+			if (descriptor != null) {
+				int ordinate = this.columns.indexOf(columnName);
+				switch (descriptor.getType()) {
+				case Types.BIGINT:
+					result.put(ordinate, Long.decode(column.getValue().toString()));
+					break;
+				case Types.INTEGER:
+					result.put(ordinate, Integer.decode(column.getValue().toString()));
+					break;
+				case Types.SMALLINT:
+					result.put(ordinate, Short.decode(column.getValue().toString()));
+					break;
+				case Types.TIMESTAMP:
+					result.put(ordinate, LocalDateTime.parse(column.getValue().toString(), DateTimeFormatter.ISO_DATE_TIME));
+					break;
+				default:
+					result.put(ordinate, column.getValue());
+				}
+			} else {
+				logger.error("Accessor " + this.getTableNameFull() + " - unknown column name " + columnName);
 			}
 		}
 		return result.values();
