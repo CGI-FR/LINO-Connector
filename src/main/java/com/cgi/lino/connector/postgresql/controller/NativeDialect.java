@@ -121,4 +121,12 @@ public interface NativeDialect {
 		return "TRUNCATE " + quoteIdentifier(schemaName, tableName) + " CASCADE";
 	}
 
+	default String getDisableConstraintsStatement(String schemaName, String tableName) {
+		return "ALTER TABLE " + quoteIdentifier(schemaName, tableName) + " DISABLE TRIGGER ALL";
+	}
+
+	default String getEnableConstraintsStatement(String schemaName, String tableName) {
+		return "ALTER TABLE " + quoteIdentifier(schemaName, tableName) + " ENABLE TRIGGER ALL";
+	}
+
 }

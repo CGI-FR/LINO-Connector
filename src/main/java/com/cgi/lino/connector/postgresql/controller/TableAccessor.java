@@ -180,6 +180,14 @@ public class TableAccessor {
 		return this.dialect.getTruncateStatement(this.schemaName, this.tableName);
 	}
 
+	public String getNativeQueryDisableContraints() {
+		return this.dialect.getDisableConstraintsStatement(this.schemaName, this.tableName);
+	}
+
+	public String getNativeQueryEnableContraints() {
+		return this.dialect.getEnableConstraintsStatement(this.schemaName, this.tableName);
+	}
+
 	public String getTableNameFull() {
 		if (this.schemaName != null) {
 			return this.schemaName + "." + this.tableName;

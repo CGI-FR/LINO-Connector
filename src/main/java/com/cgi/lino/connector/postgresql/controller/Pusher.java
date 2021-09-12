@@ -4,6 +4,7 @@ import java.text.ParseException;
 import java.util.Map;
 
 import javax.persistence.EntityManager;
+import javax.persistence.Query;
 
 public abstract class Pusher implements AutoCloseable {
 
@@ -23,14 +24,16 @@ public abstract class Pusher implements AutoCloseable {
 
 	public void open() {
 		if (this.disableConstraints) {
-			// TODO diable constraints
+			Query query = entityManager.createNativeQuery(accessor.getNativeQueryDisableContraints());
+			query.executeUpdate();
 		}
 	}
 
 	@Override
 	public void close() {
 		if (this.disableConstraints) {
-			// TODO enable constraints
+			Query query = entityManager.createNativeQuery(accessor.getNativeQueryEnableContraints());
+			query.executeUpdate();
 		}
 	}
 
