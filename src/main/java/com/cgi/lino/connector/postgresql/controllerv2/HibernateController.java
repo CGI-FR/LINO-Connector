@@ -34,7 +34,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import com.cgi.lino.connector.postgresql.controller.ConstraintDisabler;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -272,10 +271,10 @@ public class HibernateController {
 			@PathVariable("tableName") String tableName, InputStream data) throws SQLException, IOException, ParseException {
 		logger.info("Push " + tableName + " - mode=" + mode + " disableConstraints=" + disableConstraints);
 
-		ConstraintDisabler disabler = new ConstraintDisabler(datasource);
-		if (disableConstraints) {
-			disabler.disable(tableName);
-		}
+//		ConstraintDisabler disabler = new ConstraintDisabler(datasource);
+//		if (disableConstraints) {
+//			disabler.disable(tableName);
+//		}
 
 		try (BufferedReader reader = new BufferedReader(new InputStreamReader(data))) {
 			String line;
@@ -303,9 +302,9 @@ public class HibernateController {
 			} while (line != null);
 		}
 
-		if (disableConstraints) {
-			disabler.enable(tableName);
-		}
+//		if (disableConstraints) {
+//			disabler.enable(tableName);
+//		}
 
 		logger.info("Push " + tableName + " - closing connection");
 	}
