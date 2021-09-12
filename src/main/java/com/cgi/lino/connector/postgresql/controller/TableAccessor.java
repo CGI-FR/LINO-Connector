@@ -176,6 +176,10 @@ public class TableAccessor {
 		return this.dialect.getUpdateStatement(this.schemaName, this.tableName, toArray(fieldNamesOrdered.values()), toArray(whereFieldNamesOrdered.values()));
 	}
 
+	public String getNativeQueryTruncate() {
+		return this.dialect.getTruncateStatement(this.schemaName, this.tableName);
+	}
+
 	public String getTableNameFull() {
 		if (this.schemaName != null) {
 			return this.schemaName + "." + this.tableName;

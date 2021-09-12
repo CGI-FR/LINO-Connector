@@ -36,8 +36,6 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -54,10 +52,13 @@ public class HibernateController {
 
 	private final ObjectMapper mapper;
 
-	public HibernateController(final DataSource datasource, final EntityManager entityManager, final ObjectMapper mapper) {
+	private final PusherFactory pusherFactory;
+
+	public HibernateController(final DataSource datasource, final EntityManager entityManager, final ObjectMapper mapper, final PusherFactory pusherFactory) {
 		this.datasource = datasource;
 		this.entityManager = entityManager;
 		this.mapper = mapper;
+		this.pusherFactory = pusherFactory;
 
 		mapper.getFactory().disable(JsonGenerator.Feature.AUTO_CLOSE_TARGET);
 	}
@@ -255,87 +256,20 @@ public class HibernateController {
 
 		logger.info("Push " + accessor.getTableNameFull() + " - mode=" + mode + " disableConstraints=" + disableConstraints);
 
-//		ConstraintDisabler disabler = new ConstraintDisabler(datasource);
-//		if (disableConstraints) {
-//			disabler.disable(tableName);
-//		}
-
-		try (BufferedReader reader = new BufferedReader(new InputStreamReader(data))) {
+		try (BufferedReader reader = new BufferedReader(new InputStreamReader(data)); Pusher pusher = pusherFactory.create(mode, disableConstraints, accessor)) {
+			pusher.open();
 			String line;
 			do {
 				line = reader.readLine();
 				if (line != null) {
 					logger.info("Push " + tableName + " - received " + line);
-					switch (mode) {
-					case "insert":
-						pushInsert(accessor, line);
-						break;
-					case "delete":
-						pushDelete(accessor, line);
-						break;
-					case "update":
-						pushUpdate(accessor, line);
-						break;
-//					case "truncate":
-//						pushTruncate(schema, tableName, line);
-//						break;
-					default:
-						throw new UnsupportedOperationException("unknown push mode: " + mode);
-					}
+					@SuppressWarnings("unchecked")
+					Map<String, Object> object = mapper.readValue(line, HashMap.class);
+					pusher.push(object);
 				}
 			} while (line != null);
 		}
 
-//		if (disableConstraints) {
-//			disabler.enable(tableName);
-//		}
-
 		logger.info("Push " + tableName + " - closing connection");
-	}
-
-	private void pushInsert(TableAccessor accessor, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
-
-		@SuppressWarnings("unchecked")
-		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
-		int position = 0;
-		Query query = entityManager.createNativeQuery(accessor.getNativeQueryInsert(object.keySet()));
-
-		for (Object value : accessor.cast(object)) {
-			query.setParameter(++position, value);
-		}
-		int nb = query.executeUpdate();
-		logger.info("  " + nb + " row(s) insert");
-	}
-
-	private void pushDelete(TableAccessor accessor, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
-		@SuppressWarnings("unchecked")
-		Map<String, Object> object = accessor.keepPrimaryKeysOnly(mapper.readValue(jsonline, HashMap.class));
-		int position = 0;
-		Query query = entityManager.createNativeQuery(accessor.getNativeQueryDelete(object.keySet()));
-
-		for (Object value : accessor.cast(object)) {
-			query.setParameter(++position, value);
-		}
-		int nb = query.executeUpdate();
-		logger.info("  " + nb + " row(s) delete");
-	}
-
-	private void pushUpdate(TableAccessor accessor, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
-		@SuppressWarnings("unchecked")
-		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
-		Map<String, Object> values = accessor.removePrimaryKeys(object);
-		Map<String, Object> where = accessor.keepPrimaryKeysOnly(object);
-
-		Query query = entityManager.createNativeQuery(accessor.getNativeQueryUpdate(values.keySet(), where.keySet()));
-
-		int position = 0;
-		for (Object value : accessor.cast(values)) {
-			query.setParameter(++position, value);
-		}
-		for (Object value : accessor.cast(where)) {
-			query.setParameter(++position, value);
-		}
-		int nb = query.executeUpdate();
-		logger.info("  " + nb + " row(s) update");
 	}
 }
