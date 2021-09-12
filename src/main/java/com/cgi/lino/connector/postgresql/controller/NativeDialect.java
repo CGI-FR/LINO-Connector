@@ -112,8 +112,8 @@ public interface NativeDialect {
 		String selectExpressions = Arrays.stream(selectFields).map(this::quoteIdentifier).collect(Collectors.joining(", "));
 		String fieldExpressions = Arrays.stream(conditionFields).map(f -> quoteIdentifier(f) + "=?").collect(Collectors.joining(" AND "));
 		String limitExpression = (limit > 0) ? " " + this.getLimitClause(limit) : "";
-		return "SELECT " + selectExpressions + " FROM " + quoteIdentifier(schemaName, tableName) + (conditionFields.length > 0 ? " WHERE " + fieldExpressions : "") + limitExpression
-				+ (additionalCondition != null ? " AND " + additionalCondition : "");
+		return "SELECT " + selectExpressions + " FROM " + quoteIdentifier(schemaName, tableName) + (conditionFields.length > 0 ? " WHERE " + fieldExpressions : "")
+				+ (additionalCondition != null && !additionalCondition.isBlank() ? " AND " + additionalCondition : "") + limitExpression;
 	}
 
 	default String getTruncateStatement(String schemaName, String tableName) {
