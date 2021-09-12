@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -77,7 +76,7 @@ public class TableAccessor {
 	}
 
 	public Collection<Object> cast(Map<String, Object> columns) throws ParseException {
-		TreeMap<Integer, Object> result = new TreeMap<>();
+		Map<Integer, Object> result = new TreeMap<>();
 		for (Map.Entry<String, Object> column : columns.entrySet()) {
 			String columnName = column.getKey();
 			ColumnDescriptor descriptor = this.columnDescriptors.get(columnName);
@@ -103,33 +102,55 @@ public class TableAccessor {
 	}
 
 	public Map<String, Object> keepPrimaryKeysOnly(Map<String, Object> columns) {
-//		System.out.println(Arrays.toString(columns.entrySet().toArray()));
-		for (Iterator<Map.Entry<String, Object>> it = columns.entrySet().iterator(); it.hasNext();) {
-			Map.Entry<String, Object> entry = it.next();
-			if (!this.keys.contains(entry.getKey())) {
-				it.remove();
+		Map<String, Object> result = new HashMap<String, Object>();
+		for (Map.Entry<String, Object> entry : columns.entrySet()) {
+			if (this.keys.contains(entry.getKey())) {
+				result.put(entry.getKey(), entry.getValue());
 			}
 		}
-//		System.out.println(Arrays.toString(columns.entrySet().toArray()));
-		return columns;
+		return result;
+	}
+
+	public Map<String, Object> removePrimaryKeys(Map<String, Object> columns) {
+		Map<String, Object> result = new HashMap<String, Object>();
+		for (Map.Entry<String, Object> entry : columns.entrySet()) {
+			if (!this.keys.contains(entry.getKey())) {
+				result.put(entry.getKey(), entry.getValue());
+			}
+		}
+		return result;
 	}
 
 	public String getNativeQueryInsert(Collection<String> fieldNames) {
-		String[] fieldNamesOrdered = new String[fieldNames.size()];
+		Map<Integer, String> fieldNamesOrdered = new TreeMap<>();
 		for (String fieldName : fieldNames) {
 			int ordinate = this.columns.indexOf(fieldName);
-			fieldNamesOrdered[ordinate] = fieldName;
+			fieldNamesOrdered.put(ordinate, fieldName);
 		}
-		return this.dialect.getInsertIntoStatement(this.getTableNameFull(), fieldNamesOrdered);
+		return this.dialect.getInsertIntoStatement(this.getTableNameFull(), toArray(fieldNamesOrdered.values()));
 	}
 
 	public String getNativeQueryDelete(Collection<String> whereFieldNames) {
-		String[] whereFieldNamesOrdered = new String[whereFieldNames.size()];
+		Map<Integer, String> whereFieldNamesOrdered = new TreeMap<>();
 		for (String whereFieldName : whereFieldNames) {
 			int ordinate = this.columns.indexOf(whereFieldName);
-			whereFieldNamesOrdered[ordinate] = whereFieldName;
+			whereFieldNamesOrdered.put(ordinate, whereFieldName);
 		}
-		return this.dialect.getDeleteStatement(this.getTableNameFull(), whereFieldNamesOrdered);
+		return this.dialect.getDeleteStatement(this.getTableNameFull(), toArray(whereFieldNamesOrdered.values()));
+	}
+
+	public String getNativeQueryUpdate(Collection<String> fieldNames, Collection<String> whereFieldNames) {
+		Map<Integer, String> fieldNamesOrdered = new TreeMap<>();
+		for (String fieldName : fieldNames) {
+			int ordinate = this.columns.indexOf(fieldName);
+			fieldNamesOrdered.put(ordinate, fieldName);
+		}
+		Map<Integer, String> whereFieldNamesOrdered = new TreeMap<>();
+		for (String whereFieldName : whereFieldNames) {
+			int ordinate = this.columns.indexOf(whereFieldName);
+			whereFieldNamesOrdered.put(ordinate, whereFieldName);
+		}
+		return this.dialect.getUpdateStatement(this.getTableNameFull(), toArray(fieldNamesOrdered.values()), toArray(whereFieldNamesOrdered.values()));
 	}
 
 	public String getTableNameFull() {
@@ -181,7 +202,10 @@ public class TableAccessor {
 			sb.append(")");
 			return sb.toString();
 		}
+	}
 
+	private static String[] toArray(Collection<String> coll) {
+		return coll.toArray(new String[coll.size()]);
 	}
 
 }

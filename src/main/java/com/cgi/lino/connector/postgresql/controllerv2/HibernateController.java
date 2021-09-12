@@ -284,11 +284,20 @@ public class HibernateController {
 				if (line != null) {
 					logger.info("Push " + tableName + " - received " + line);
 					switch (mode) {
+					case "insert":
+						pushInsert(schema, tableName, line);
+						break;
 					case "delete":
 						pushDelete(schema, tableName, line);
 						break;
+					case "update":
+						pushUpdate(schema, tableName, line);
+						break;
+//					case "truncate":
+//						pushTruncate(schema, tableName, line);
+//						break;
 					default:
-						pushInsert(schema, tableName, line);
+						throw new UnsupportedOperationException("unknown push mode: " + mode);
 					}
 				}
 			} while (line != null);
@@ -329,5 +338,26 @@ public class HibernateController {
 		}
 		int nb = query.executeUpdate();
 		logger.info("  " + nb + " row(s) delete");
+	}
+
+	private void pushUpdate(String schema, String tableName, String jsonline) throws JsonMappingException, JsonProcessingException, SQLException, ParseException {
+		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+
+		@SuppressWarnings("unchecked")
+		Map<String, Object> object = mapper.readValue(jsonline, HashMap.class);
+		Map<String, Object> values = accessor.removePrimaryKeys(object);
+		Map<String, Object> where = accessor.keepPrimaryKeysOnly(object);
+
+		Query query = entityManager.createNativeQuery(accessor.getNativeQueryUpdate(values.keySet(), where.keySet()));
+
+		int position = 0;
+		for (Object value : accessor.cast(values)) {
+			query.setParameter(++position, value);
+		}
+		for (Object value : accessor.cast(where)) {
+			query.setParameter(++position, value);
+		}
+		int nb = query.executeUpdate();
+		logger.info("  " + nb + " row(s) update");
 	}
 }
