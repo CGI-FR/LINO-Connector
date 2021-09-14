@@ -8,6 +8,11 @@ public class NativeDialectH2 implements NativeDialect {
 	}
 
 	@Override
+	public String getTruncateStatement(String schemaName, String tableName) {
+		return "TRUNCATE TABLE " + quoteIdentifier(schemaName, tableName);
+	}
+
+	@Override
 	public String getDisableConstraintsStatement(String schemaName, String tableName) {
 		// Not supported
 		return "CREATE TABLE IF NOT EXISTS " + quoteIdentifier(schemaName, tableName);
