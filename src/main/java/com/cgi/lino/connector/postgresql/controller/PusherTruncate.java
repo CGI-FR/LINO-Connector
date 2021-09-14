@@ -12,9 +12,13 @@ public class PusherTruncate extends PusherInsert {
 
 	public PusherTruncate(final EntityManager entityManager, final TableAccessor accessor, final boolean disableConstraints) {
 		super(entityManager, accessor, disableConstraints);
+	}
+
+	@Override
+	public void open() {
+		super.open();
 
 		Query query = entityManager.createNativeQuery(accessor.getNativeQueryTruncate());
-
 		query.executeUpdate();
 		logger.info("  table " + accessor.getTableNameFull() + " truncate");
 	}
