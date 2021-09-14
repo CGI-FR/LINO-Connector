@@ -1,6 +1,6 @@
 package com.cgi.lino.connector.postgresql.controller;
 
-import javax.persistence.EntityManager;
+import javax.persistence.EntityManagerFactory;
 import javax.persistence.Query;
 
 import org.slf4j.Logger;
@@ -10,8 +10,8 @@ public class PusherTruncate extends PusherInsert {
 
 	private static final Logger logger = LoggerFactory.getLogger(PusherTruncate.class);
 
-	public PusherTruncate(final EntityManager entityManager, final TableAccessor accessor, final boolean disableConstraints) {
-		super(entityManager, accessor, disableConstraints);
+	public PusherTruncate(final EntityManagerFactory entityManagerFactory, final TableAccessor accessor, final boolean disableConstraints) {
+		super(entityManagerFactory, accessor, disableConstraints);
 	}
 
 	@Override
