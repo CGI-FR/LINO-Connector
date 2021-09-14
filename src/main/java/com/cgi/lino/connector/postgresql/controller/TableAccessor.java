@@ -9,6 +9,7 @@ import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -62,6 +63,16 @@ public class TableAccessor {
 		}
 	}
 
+	public TableAccessor(TableAccessor other) {
+		this.datasource = other.datasource;
+		this.dialect = other.dialect;
+		this.schemaName = other.schemaName;
+		this.tableName = other.tableName;
+		this.keys = other.keys;
+		this.columnDescriptors.putAll(other.columnDescriptors);
+		this.columns.addAll(other.columns);
+	}
+
 	@Override
 	public String toString() {
 		StringBuilder sb = new StringBuilder();
@@ -73,6 +84,13 @@ public class TableAccessor {
 			sb.append(System.lineSeparator());
 		}
 		return sb.toString();
+	}
+
+	public TableAccessor withPrimaryKeys(String[] pkeys) {
+		TableAccessor copy = new TableAccessor(this);
+		copy.keys.clear();
+		copy.keys.addAll(Arrays.asList(pkeys));
+		return copy;
 	}
 
 	public Collection<Object> cast(Map<String, Object> columns) throws ParseException {

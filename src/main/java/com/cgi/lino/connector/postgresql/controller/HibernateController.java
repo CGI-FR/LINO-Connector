@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -189,8 +190,13 @@ public class HibernateController {
 	@Transactional(readOnly = true)
 	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_NDJSON_VALUE)
 	public ResponseEntity<StreamingResponseBody> pullData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
-			@RequestBody(required = false) Map<String, Object> filter) throws SQLException, IOException, ParseException {
+			@RequestBody(required = false) Map<String, Object> filter, @RequestHeader(name = "Primary-Keys", required = false) String pkeysJson) throws SQLException, IOException, ParseException {
 		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+
+		if (pkeysJson != null) {
+			String[] pkeys = mapper.readValue(pkeysJson, String[].class);
+			accessor = accessor.withPrimaryKeys(pkeys);
+		}
 
 		int limit = 0;
 		String filterWhere = null;
@@ -240,8 +246,13 @@ public class HibernateController {
 	@Transactional
 	@PostMapping(path = "/data/{tableName}", consumes = MediaType.APPLICATION_NDJSON_VALUE)
 	public void pushData(@RequestParam(required = false) String schema, @RequestParam(required = false) String mode, @RequestParam(required = false) boolean disableConstraints,
-			@PathVariable("tableName") String tableName, InputStream data) throws SQLException, IOException, ParseException {
+			@PathVariable("tableName") String tableName, InputStream data, @RequestHeader(name = "Primary-Keys", required = false) String pkeysJson) throws SQLException, IOException, ParseException {
 		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+
+		if (pkeysJson != null) {
+			String[] pkeys = mapper.readValue(pkeysJson, String[].class);
+			accessor = accessor.withPrimaryKeys(pkeys);
+		}
 
 		logger.info("Push " + accessor.getTableNameFull() + " - mode=" + mode + " disableConstraints=" + disableConstraints);
 
