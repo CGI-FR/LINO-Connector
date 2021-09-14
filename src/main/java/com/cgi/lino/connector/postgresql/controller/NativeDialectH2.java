@@ -14,13 +14,11 @@ public class NativeDialectH2 implements NativeDialect {
 
 	@Override
 	public String getDisableConstraintsStatement(String schemaName, String tableName) {
-		// Not supported
-		return "CREATE TABLE IF NOT EXISTS " + quoteIdentifier(schemaName, tableName);
+		return "ALTER TABLE " + quoteIdentifier(schemaName, tableName) + " SET REFERENTIAL_INTEGRITY FALSE";
 	}
 
 	@Override
 	public String getEnableConstraintsStatement(String schemaName, String tableName) {
-		// Not supported
-		return "CREATE TABLE IF NOT EXISTS " + quoteIdentifier(schemaName, tableName);
+		return "ALTER TABLE " + quoteIdentifier(schemaName, tableName) + " SET REFERENTIAL_INTEGRITY TRUE";
 	}
 }
