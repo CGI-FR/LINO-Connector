@@ -40,6 +40,7 @@ public abstract class Pusher implements AutoCloseable {
 		this.entityManager.flush();
 		this.entityManager.clear();
 		this.entityManager.getTransaction().commit();
+		this.entityManager.close();
 	}
 
 }

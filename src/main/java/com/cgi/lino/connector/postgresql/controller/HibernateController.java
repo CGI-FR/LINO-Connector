@@ -35,7 +35,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
+import com.cgi.lino.connector.postgresql.controller.TableAccessor.TableDescriptor;
 import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -113,7 +115,7 @@ public class HibernateController {
 	}
 
 	@GetMapping(path = "/tables", produces = MediaType.APPLICATION_JSON_VALUE)
-	public String getTables(@RequestParam(required = false) String schema) throws SQLException {
+	public String getTables(@RequestParam(required = false) String schema) throws SQLException, JsonProcessingException {
 		StringBuilder result = new StringBuilder("{\"version\":\"v1\",\"tables\":[");
 
 		try (Connection connection = datasource.getConnection()) {
@@ -126,24 +128,10 @@ public class HibernateController {
 					result.append(tablePrefix);
 
 					tablePrefix = ",";
-					result.append("{\"name\":\"");
-					result.append(tableName);
-					result.append("\",\"keys\":[");
 
-					// primary keys
-					String pkPrefix = "";
-					try (ResultSet pkRs = databaseMetaData.getPrimaryKeys(null, schema, tableName)) {
-						while (pkRs.next()) {
-							String pkName = pkRs.getString("COLUMN_NAME");
-							result.append(pkPrefix);
-							pkPrefix = ",";
-							result.append("\"");
-							result.append(pkName);
-							result.append("\"");
-						}
-					}
-
-					result.append("]}");
+					TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
+					TableDescriptor descriptor = accessor.getDescriptor();
+					result.append(mapper.writeValueAsString(descriptor));
 				}
 			}
 		}

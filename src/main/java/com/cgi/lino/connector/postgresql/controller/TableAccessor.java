@@ -193,6 +193,18 @@ public class TableAccessor {
 		return this.tableName;
 	}
 
+	public TableDescriptor getDescriptor() {
+		Collection<String> keys = new ArrayList<>();
+		Collection<ColumnDescriptor> columns = new ArrayList<>();
+		for (Map.Entry<String, ColumnDescriptor> column : columnDescriptors.entrySet()) {
+			if (this.keys.contains(column.getKey())) {
+				keys.add(column.getKey());
+			}
+			columns.add(column.getValue());
+		}
+		return new TableDescriptor(this.tableName, toArray(keys), columns.toArray(new ColumnDescriptor[columns.size()]));
+	}
+
 	public static class ColumnDescriptor {
 
 		private final String name;
@@ -235,6 +247,21 @@ public class TableAccessor {
 			sb.append(")");
 			return sb.toString();
 		}
+	}
+
+	public static class TableDescriptor {
+
+		public final String name;
+		public final String[] keys;
+		public final ColumnDescriptor[] columns;
+
+		public TableDescriptor(String name, String[] keys, ColumnDescriptor[] columns) {
+			super();
+			this.name = name;
+			this.keys = keys;
+			this.columns = columns;
+		}
+
 	}
 
 	private static String[] toArray(Collection<String> coll) {
