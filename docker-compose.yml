@@ -1,10 +1,18 @@
 version: "3.7"
 
 services:
-  db2:
+  pg:
     image: frantiseks/postgres-sakila
     restart: always
     environment:
       POSTGRES_PASSWORD: sakila
     ports:
       - 5432:5432
+  h2:
+    image: oscarfonts/h2
+    restart: always
+    environment:
+      H2_OPTIONS: -ifNotExists
+    ports:
+      - 1521:1521
+      - 81:81

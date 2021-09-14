@@ -9,7 +9,6 @@ import java.text.ParseException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -52,14 +51,13 @@ public class TableAccessor {
 				}
 			}
 			try (ResultSet pkRs = databaseMetaData.getPrimaryKeys(null, schemaName, tableName)) {
-				pkRs.last();
-				this.keys = Arrays.asList(new String[pkRs.getRow()]);
-				pkRs.beforeFirst();
+				Map<Integer, String> orderedKeys = new TreeMap<>();
 				while (pkRs.next()) {
 					String pkColumnName = pkRs.getString("COLUMN_NAME");
 					short pkSeq = pkRs.getShort("KEY_SEQ");
-					this.keys.set(pkSeq - 1, pkColumnName);
+					orderedKeys.put(pkSeq - 1, pkColumnName);
 				}
+				this.keys = new ArrayList<>(orderedKeys.values());
 			}
 		}
 	}
