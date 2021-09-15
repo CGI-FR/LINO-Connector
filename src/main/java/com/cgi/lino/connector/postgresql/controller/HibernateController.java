@@ -9,6 +9,7 @@ import java.sql.DatabaseMetaData;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -190,31 +191,31 @@ public class HibernateController {
 	@Transactional(readOnly = true)
 	@GetMapping(path = "/data/{tableName}", produces = MediaType.APPLICATION_NDJSON_VALUE)
 	public ResponseEntity<StreamingResponseBody> pullData(@RequestParam(required = false) String schema, @PathVariable("tableName") String tableName,
-			@RequestBody(required = false) Map<String, Object> filter, @RequestHeader(name = "Primary-Keys", required = false) String pkeysJson) throws SQLException, IOException, ParseException {
+			@RequestBody(required = false) Map<String, Object> filter, @RequestHeader(name = "Select-Columns", required = false) String scolsJson) throws SQLException, IOException, ParseException {
 		TableAccessor accessor = new TableAccessor(datasource, schema, tableName);
 
-		if (pkeysJson != null) {
-			String[] pkeys = mapper.readValue(pkeysJson, String[].class);
-			accessor = accessor.withPrimaryKeys(pkeys);
+		Collection<String> selectColumns = null;
+		if (scolsJson != null) {
+			selectColumns = Arrays.asList(mapper.readValue(scolsJson, String[].class));
 		}
 
 		int limit = 0;
-		String filterWhere = null;
+		String andWhere = null;
 		Collection<Object> values;
-		Set<String> columns;
+		Set<String> whereColumns;
 		if (filter != null) {
 			@SuppressWarnings("unchecked")
 			Map<String, Object> filterValues = (Map<String, Object>) filter.get("values");
-			filterWhere = (String) filter.get("where");
+			andWhere = (String) filter.get("where");
 			values = accessor.cast(filterValues);
-			columns = filterValues.keySet();
+			whereColumns = filterValues.keySet();
 			limit = (int) filter.get("limit");
 		} else {
 			values = Collections.emptyList();
-			columns = Set.of();
+			whereColumns = Set.of();
 		}
 
-		String querySql = accessor.getNativeQuerySelect(null, columns, filterWhere, limit);
+		String querySql = accessor.getNativeQuerySelect(selectColumns, whereColumns, andWhere, limit);
 		this.logger.info("Pull " + accessor.getTableNameFull() + " - " + querySql);
 
 		StreamingResponseBody stream = out -> {
