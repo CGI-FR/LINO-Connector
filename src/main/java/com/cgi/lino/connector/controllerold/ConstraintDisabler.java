@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controllerold;
+package com.cgi.lino.connector.controllerold;
 
 import java.sql.Connection;
 import java.sql.SQLException;

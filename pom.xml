@@ -10,10 +10,10 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.cgi.lino</groupId>
-	<artifactId>lino-connector-postgresql</artifactId>
+	<artifactId>lino-connector</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>lino-connector-postgresql</name>
-	<description>HTTP Connector for PostgreSQL Database</description>
+	<name>lino-connector</name>
+	<description>HTTP Connector for LINO</description>
 	<properties>
 		<java.version>11</java.version>
 	</properties>

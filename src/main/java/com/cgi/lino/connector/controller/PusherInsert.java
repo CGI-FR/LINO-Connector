@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controller;
+package com.cgi.lino.connector.controller;
 
 import java.text.ParseException;
 import java.util.Map;

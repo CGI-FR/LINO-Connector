@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controller;
+package com.cgi.lino.connector.controller;
 
 public class NativeDialectH2 implements NativeDialect {
 

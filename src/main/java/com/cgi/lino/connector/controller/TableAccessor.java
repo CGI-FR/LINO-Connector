@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controller;
+package com.cgi.lino.connector.controller;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;

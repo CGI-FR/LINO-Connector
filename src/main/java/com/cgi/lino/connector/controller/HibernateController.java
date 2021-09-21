@@ -1,4 +1,4 @@
-package com.cgi.lino.connector.postgresql.controller;
+package com.cgi.lino.connector.controller;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.StreamingResponseBody;
 
-import com.cgi.lino.connector.postgresql.controller.TableAccessor.TableDescriptor;
+import com.cgi.lino.connector.controller.TableAccessor.TableDescriptor;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
