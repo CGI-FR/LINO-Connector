@@ -41,7 +41,10 @@ server.port=8080
 ### Launch the connector
 
 ```console
-$ mvn spring-boot:run 
+$ mvn spring-boot:run
+...
+2021-10-12 14:49:45.490  INFO 2776 --- [  restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port(s): 8080 (http) with context path ''
+2021-10-12 14:49:45.507  INFO 2776 --- [  restartedMain] com.cgi.lino.connector.Application       : Started Application in 8.814 seconds (JVM running for 9.472)
 ```
 
 ### Connect LINO
