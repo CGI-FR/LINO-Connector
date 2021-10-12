@@ -15,16 +15,14 @@
 // You should have received a copy of the GNU General Public License
 // along with LINO.  If not, see <http://www.gnu.org/licenses/>.
 
-package com.cgi.lino.connector.db2;
+package com.cgi.lino.db2connector.controller;
 
-import org.junit.jupiter.api.Test;
-import org.springframework.boot.test.context.SpringBootTest;
+public class NativeDialectDB2 implements NativeDialect {
 
-@SpringBootTest
-class LinoConnectorDb2ApplicationTests {
-
-	@Test
-	void contextLoads() {
+	@Override
+	public boolean canHandle(String url) {
+		// TODO Stub de la méthode généré automatiquement
+		return false;
 	}
 
 }
