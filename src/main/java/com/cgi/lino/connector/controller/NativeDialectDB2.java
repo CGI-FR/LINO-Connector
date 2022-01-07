@@ -15,7 +15,7 @@
 // You should have received a copy of the GNU General Public License
 // along with LINO.  If not, see <http://www.gnu.org/licenses/>.
 
-package com.cgi.lino.db2connector.controller;
+package com.cgi.lino.connector.controller;
 
 public class NativeDialectDB2 implements NativeDialect {
 
