@@ -1,4 +1,4 @@
-FROM openjdk:11.0.13-jdk-slim
+FROM adoptopenjdk/openjdk11:alpine-jre
 RUN addgroup -S spring && adduser -S spring -G spring
 USER spring:spring
 ARG DEPENDENCY=target/dependency
