@@ -6,7 +6,20 @@ See project [LINO](https://github.com/CGI-FR/LINO) for more informations.
 
 ## Usage
 
-### Configure the connector
+### With Docker (easiest)
+
+Run the command
+
+```console
+docker run --rm -p 8080:8080 ghcr.io/cgi-fr/lino-connector:main
+  --spring.datasource.url=<your database JDBC url>
+  --spring.datasource.username=<your database user name>
+  --spring.datasource.password=<your database user password>
+```
+
+### With Maven
+
+#### Configure the connector
 
 Configure a datasource in the `application.properties` file.
 
@@ -42,7 +55,7 @@ Configure the server port in the `application.properties` file.
 server.port=8080
 ```
 
-### Launch the connector
+#### Launch the connector
 
 ```console
 $ mvn spring-boot:run
