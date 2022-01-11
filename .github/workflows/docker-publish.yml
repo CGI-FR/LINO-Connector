@@ -36,7 +36,7 @@ jobs:
         uses: actions/checkout@v2
         
       - name: Build with Maven
-        run: mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar) && mvn -B package --file pom.xml
+        run: mvn -B package --file pom.xml && mkdir -p target/dependency && (cd target/dependency; jar -xf ../*.jar)
 
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
