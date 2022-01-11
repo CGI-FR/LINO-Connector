@@ -34,6 +34,9 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2
+        
+      - name: Build with Maven
+        run: mvn -B package --file pom.xml
 
       # Install the cosign tool except on PR
       # https://github.com/sigstore/cosign-installer
