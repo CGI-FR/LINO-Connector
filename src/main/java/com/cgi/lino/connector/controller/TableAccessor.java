@@ -58,6 +58,8 @@ public class TableAccessor {
 		try (Connection connection = this.datasource.getConnection()) {
 			DatabaseMetaData databaseMetaData = connection.getMetaData();
 			this.dialect = NativeDialect.get(databaseMetaData.getURL()).get();
+			logger.info("loading dialect " + dialect.getClass().getName()  + " for " + databaseMetaData.getURL());
+
 			try (ResultSet colRs = databaseMetaData.getColumns(null, schemaName, tableName, null)) {
 				while (colRs.next()) {
 					String columnName = colRs.getString("COLUMN_NAME");
@@ -117,21 +119,25 @@ public class TableAccessor {
 			ColumnDescriptor descriptor = this.columnDescriptors.get(columnName);
 			if (descriptor != null) {
 				int ordinate = this.columns.indexOf(columnName);
-				switch (descriptor.getType()) {
-				case Types.BIGINT:
-					result.put(ordinate, Long.decode(column.getValue().toString()));
-					break;
-				case Types.INTEGER:
-					result.put(ordinate, Integer.decode(column.getValue().toString()));
-					break;
-				case Types.SMALLINT:
-					result.put(ordinate, Short.decode(column.getValue().toString()));
-					break;
-				case Types.TIMESTAMP:
-					result.put(ordinate, LocalDateTime.parse(column.getValue().toString(), DateTimeFormatter.ISO_DATE_TIME));
-					break;
-				default:
-					result.put(ordinate, column.getValue());
+				if(column.getValue() == null) {
+					result.put(ordinate, null);
+				} else {
+					switch (descriptor.getType()) {
+					case Types.BIGINT:
+						result.put(ordinate, Long.decode(column.getValue().toString()));
+						break;
+					case Types.INTEGER:
+						result.put(ordinate, Integer.decode(column.getValue().toString()));
+						break;
+					case Types.SMALLINT:
+						result.put(ordinate, Short.decode(column.getValue().toString()));
+						break;
+					case Types.TIMESTAMP:
+						result.put(ordinate, LocalDateTime.parse(column.getValue().toString(), DateTimeFormatter.ISO_DATE_TIME));
+						break;
+					default:
+						result.put(ordinate, column.getValue());
+					}
 				}
 			} else {
 				logger.error("Accessor " + this.getTableNameFull() + " - unknown column name " + columnName);

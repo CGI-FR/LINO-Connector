@@ -17,12 +17,35 @@
 
 package com.cgi.lino.connector.controller;
 
+import java.util.Arrays;
+import java.util.stream.Collectors;
+
 public class NativeDialectDB2 implements NativeDialect {
 
 	@Override
 	public boolean canHandle(String url) {
-		// TODO Stub de la méthode généré automatiquement
-		return false;
+		return url.startsWith("jdbc:db2:");
+	}
+
+	/**
+	 * Get select fields statement by condition fields. Default use SELECT.
+	 */
+	@Override
+	public String getSelectFromStatement(String schemaName, String tableName, String[] selectFields, String[] conditionFields, String additionalCondition, int limit) {
+		String selectExpressions = "*";
+		String fieldExpressions = Arrays.stream(conditionFields).map(f -> quoteIdentifier(f) + "=?").collect(Collectors.joining(" AND "));
+		String limitExpression = (limit > 0) ? " " + this.getLimitClause(limit) : "";
+		String additionalWhereKeyword = conditionFields.length > 0 ? " AND " : " WHERE ";
+		return "SELECT " + selectExpressions + " FROM " + quoteIdentifier(schemaName, tableName) + (conditionFields.length > 0 ? " WHERE " + fieldExpressions : "")
+				+ (additionalCondition != null && !additionalCondition.isBlank() ? additionalWhereKeyword + additionalCondition : "") + limitExpression;
+	}
+
+	/**
+	 * Generate a limit clause.
+	 */
+	@Override
+	public String getLimitClause(int limit) {
+		return "FETCH FIRST " + limit + " ROWS ONLY";
 	}
 
 }

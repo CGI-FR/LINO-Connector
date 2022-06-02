@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 
 public interface NativeDialect {
 
-	static final List<NativeDialect> DIALECTS = Arrays.asList((NativeDialect) new NativeDialectPostgres(), new NativeDialectH2(), new NativeDialectDefault());
+	static final List<NativeDialect> DIALECTS = Arrays.asList((NativeDialect) new NativeDialectPostgres(), new NativeDialectH2(), new NativeDialectDB2(), new NativeDialectDefault());
 
 	/**
 	 * Fetch the JDBCDialect class corresponding to a given database url.
