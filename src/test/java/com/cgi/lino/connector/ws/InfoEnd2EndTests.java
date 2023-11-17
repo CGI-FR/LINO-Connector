@@ -20,9 +20,6 @@ package com.cgi.lino.connector.ws;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import java.lang.reflect.Type;
-import java.net.MalformedURLException;
-import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
@@ -33,7 +30,6 @@ import java.util.concurrent.TimeoutException;
 
 import javax.sql.DataSource;
 
-import org.assertj.core.api.CompletableFutureAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
@@ -43,21 +39,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.messaging.converter.StringMessageConverter;
-import org.springframework.messaging.simp.stomp.StompHeaders;
-import org.springframework.messaging.simp.stomp.StompSession;
-import org.springframework.messaging.simp.stomp.StompSessionHandler;
-import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter;
-import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
-import org.springframework.web.socket.WebSocketHandler;
-import org.springframework.web.socket.WebSocketMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.handler.TextWebSocketHandler;
 import org.springframework.web.socket.messaging.WebSocketStompClient;
 
+import com.cgi.lino.connector.DataUtils;
 import com.cgi.lino.connector.controller.ws.dto.CommandMessage;
 import com.cgi.lino.connector.controller.ws.dto.constants.Actions;
 import com.cgi.lino.connector.controller.ws.dto.payload.DBPayload;
@@ -68,7 +56,7 @@ import lombok.extern.slf4j.Slf4j;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @EnableWebSocket
 @Slf4j
-class NominalEnd2EndTests {
+class InfoEnd2EndTests {
 
 	@Autowired
 	ObjectMapper mapper;
@@ -82,41 +70,24 @@ class NominalEnd2EndTests {
 
 	@BeforeAll
 	static void initDatabase(@Autowired DataSource ds) throws SQLException {
-		try (Connection conn = ds.getConnection()) {
-			conn.createStatement().execute(
-					"create table myTable (bli VARCHAR(100) NOT NULL, myString VARCHAR(100) NOT NULL, myAge INT);");
-		}
-
+		DataUtils.initTestDatabase(ds);
 	}
 
 	@AfterAll
 	static void cleanDatabase(@Autowired DataSource ds) throws SQLException {
-		try (Connection conn = ds.getConnection()) {
-			conn.createStatement().execute("drop table myTable;");
-		}
-
+		DataUtils.cleanDatabase(ds);
 	}
 
 	@BeforeEach
 	void setup(@Autowired DataSource ds)
 			throws SQLException, InterruptedException, ExecutionException, TimeoutException {
-		try (Connection conn = ds.getConnection()) {
-			conn.createStatement().execute("TRUNCATE TABLE myTable;");
-			conn.createStatement().execute(
-					"insert into myTable (bli, myString, myAge) values ('blo', 'isAString',1),('blio', 'isAString2',42);");
-		}
+		DataUtils.resetData(ds);
 		this.blockingQueue = new LinkedBlockingDeque<>();
 		this.standardWebSocketClient = new StandardWebSocketClient();
-		/*
-		 * stompClient = new WebSocketStompClient();
-		 * stompClient.setMessageConverter(new StringMessageConverter());
-		 */
-
 	}
 
 	@Test
 	void getInfo() {
-		
 			try {
 				
 				String cmdId = "myChannel";
@@ -142,7 +113,7 @@ class NominalEnd2EndTests {
 
 				/* TABLES */
 				String expectedTables = """
-					{"id":"myChannel","error":null,"next":false,"payload":[{"name":"MYTABLE","keys":[]}]}""";
+					{"id":"myChannel","error":null,"next":false,"payload":[{"name":"MYSUBTABLE","keys":["ID"]},{"name":"MYTABLE","keys":["BLI"]}]}""";
 				CommandMessage commandMessageTables = new CommandMessage(cmdId, Actions.TABLES, new DBPayload("PUBLIC"));
 				message = mapper.writeValueAsString(commandMessageTables);
 				sessionFuture.get(10,TimeUnit.SECONDS).sendMessage(new TextMessage(message.getBytes()));
@@ -151,7 +122,7 @@ class NominalEnd2EndTests {
 
 				/* RELATIONS */
 				String expectedRelations = """
-					{"id":"myChannel","error":null,"next":false,"payload":[]}""";
+					{"id":"myChannel","error":null,"next":false,"payload":[{"name":"CONSTRAINT_B9","parent":{"name":"MYTABLE","keys":["BLI"]},"child":{"name":"MYSUBTABLE","keys":["BLI_REFERENCE"]}}]}""";
 				CommandMessage commandMessageRelations = new CommandMessage(cmdId, Actions.RELATIONS, new DBPayload("PUBLIC"));
 				message = mapper.writeValueAsString(commandMessageRelations);
 				sessionFuture.get(10,TimeUnit.SECONDS).sendMessage(new TextMessage(message.getBytes()));
@@ -165,21 +136,5 @@ class NominalEnd2EndTests {
 			}		
 	}
 
-
-	class TestWebSocketHandler extends TextWebSocketHandler {
-
-		private BlockingQueue<String> blockingQueue;
-
-		TestWebSocketHandler(BlockingQueue<String> blockingQueue) {
-			this.blockingQueue = blockingQueue;
-		}
-
-		@Override
-		public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-			this.blockingQueue.add(message.getPayload());
-		}
-
-		
-	}
 
 }

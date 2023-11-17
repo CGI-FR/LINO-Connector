@@ -60,22 +60,25 @@ public class DatabaseConnectorSocket extends TextWebSocketHandler {
 					cmdMessage = mapper.readValue(message.getPayload(), CommandMessage.class);
 					this.messageIncoming(session, cmdMessage);
 				} catch (RemoteException e) {
+					e.printStackTrace();
 					log.error(ERROR_MESSAGE, "40003", e.getCausalityId(), "error from %s with id: %s. Cause is %s"
-							.formatted(session.getId(), e.getCommandId(), e.getMessage()));
+							.formatted(session.getId(), e.getCommandId(), e.getMessage()),e);
 					this.sendError(session, e.getCommandId(),
-							ERROR_MESSAGE.formatted("40003", e.getCausalityId(), e.getMessage()));
+							ERROR_MESSAGE_F.formatted("40003", e.getCausalityId(), e.getMessage()));
 				} catch (JsonProcessingException e) {
+					String causalityId=  UUID.randomUUID().toString();
 					String errorMessage = "message received %s from %s has not been parsed, due to syntax error. Cause : %s)"
 							.formatted(this.escape(message.getPayload()), session.getId(), escape(e.getMessage()));
-					log.error(ERROR_MESSAGE, "40004", UUID.randomUUID(), errorMessage);
+					log.error(ERROR_MESSAGE, "40004", causalityId, errorMessage,e);
 					this.sendError(session, "",
-							ERROR_MESSAGE.formatted("40004", UUID.randomUUID().toString(), errorMessage));
+							ERROR_MESSAGE_F.formatted("40004", causalityId, errorMessage));
 				} catch (Throwable e) {
-					log.error(ERROR_MESSAGE, "40002", UUID.randomUUID(),
+					String causalityId=  UUID.randomUUID().toString();
+					log.error(ERROR_MESSAGE, "40002",causalityId,
 							"message received from %s with id: %s has occured an error %s)".formatted(session.getId(),
-									cmdMessage.getId(), e.getMessage()));
+									cmdMessage.getId(), e.getMessage()),e);
 					this.sendError(session, cmdMessage.getId(),
-							ERROR_MESSAGE.formatted("40002", UUID.randomUUID().toString(), e.getMessage()));
+							ERROR_MESSAGE_F.formatted("40002", causalityId, e.getMessage()));
 				}
 			}
 		});
@@ -117,6 +120,7 @@ public class DatabaseConnectorSocket extends TextWebSocketHandler {
 	}
 
 	private void pullOpen(WebSocketSession session, CommandMessage cmdMessage) {
+		
 		try {
 			Stream<ObjectNode> stream = pullDatabaseService.pullData(cmdMessage.getId(),
 					(PullOpenPayload) cmdMessage.getPayload());
@@ -124,9 +128,11 @@ public class DatabaseConnectorSocket extends TextWebSocketHandler {
 				this.sendResultMessage(session, cmdMessage.getId(), true, item);
 			});
 			this.sendResultMessage(session, cmdMessage.getId(), false, null);
-		} catch (SQLException | ParseException e) {
+		} catch (Exception e) {
+			e.printStackTrace();
 			throw new RemoteException(cmdMessage.getId(), e);
 		}
+		
 
 	}
 
@@ -164,7 +170,7 @@ public class DatabaseConnectorSocket extends TextWebSocketHandler {
 		try {
 			String ret = mapper.writeValueAsString(new ResultMessage(id, null, next, payload));
 			log.debug(DEBUG_MESSAGE, "10040", "response of %s for %s is %s".formatted(session.getId(), id, ret));
-			session.sendMessage(new TextMessage(ret, !next));
+			session.sendMessage(new TextMessage(ret, true));
 
 		} catch (IOException e) {
 			throw new RemoteException(id, e);

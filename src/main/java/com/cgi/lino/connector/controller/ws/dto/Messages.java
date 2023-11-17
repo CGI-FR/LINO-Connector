@@ -33,4 +33,8 @@ public class Messages {
             {"code":"{}", "level":"ERROR","causalityId":"{}","message":"{}"}
             """;
 
+    public static final String ERROR_MESSAGE_F = """
+            {"code":"%s", "level":"ERROR","causalityId":"%s","message":"%s"}
+            """;
+
 }

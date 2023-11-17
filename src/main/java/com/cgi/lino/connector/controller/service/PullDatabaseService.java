@@ -20,17 +20,15 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ValueNode;
 
-import jakarta.persistence.EntityManager;
+import jakarta.persistence.EntityManagerFactory;
 import jakarta.persistence.Query;
 import jakarta.persistence.Tuple;
+import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
 import java.util.stream.Stream;
-
-
-
 import java.sql.SQLException;
 import java.text.ParseException;
 
@@ -61,23 +59,25 @@ public class PullDatabaseService {
 
     private  DataSource datasource;
 
-    private  EntityManager entityManager;
+    @Getter
+    private  EntityManagerFactory entityManagerFactory;
 
 
-    public  PullDatabaseService (final  DataSource datasource,final  EntityManager entityManager, final ObjectMapper mapper) {
+    public  PullDatabaseService (final  DataSource datasource,final  EntityManagerFactory entityManagerFactory, final ObjectMapper mapper) {
         this.datasource = datasource;
-        this.entityManager = entityManager;
+        this.entityManagerFactory = entityManagerFactory;
         this.mapper= mapper;
     }
 
-
+   
     public Stream<ObjectNode> pullData(@NonNull String cmdId,PullOpenPayload payload) throws SQLException, ParseException{
         return this.pullData(cmdId, payload.getSchema(), payload.getTable(), payload.getColumns(), payload.getFilter());
     }
-    
-    public Stream<ObjectNode> pullData(@NonNull String cmdId,String schemaName, String tableName, List<String> selectColumns, Filter filter) throws SQLException, ParseException{
-            TableAccessor accessor = new TableAccessor(datasource, schemaName, tableName, Boolean.valueOf(this.insecure), this.timeZone);
 
+    public Stream<ObjectNode> pullData(@NonNull String cmdId,String schemaName, String tableName, List<String> selectColumns, Filter filter) throws SQLException, ParseException{
+
+            
+            TableAccessor accessor = new TableAccessor(datasource, schemaName, tableName, Boolean.valueOf(this.insecure), this.timeZone);
             Integer limit = 0;
             String andWhere = null;
             Map<String,Object> values;
@@ -92,17 +92,18 @@ public class PullDatabaseService {
                 values = new HashMap<>();
                 whereColumns = new HashMap<>();
             }
-
+            
+        
             String querySql = accessor.getNativeQuerySelect(selectColumns, whereColumns.keySet(), andWhere, limit);
             log.info(INFO_MESSAGE, "20023", "Pull %s - %s".formatted(accessor.getTableNameFull(), querySql));
-            Query query = entityManager.createNativeQuery(querySql, Tuple.class);
+            Query query = entityManagerFactory.createEntityManager().createNativeQuery(querySql, Tuple.class);
             for (Map.Entry<String,Object> entry : values.entrySet()) {
                 query.setParameter(entry.getKey(), entry.getValue());
             }
             for (Map.Entry<String,Object> entry : whereColumns.entrySet()) {
                 query.setParameter(entry.getKey(), entry.getValue());
             }
-            @SuppressWarnings("unchecked")
+            @SuppressWarnings("unchecked")            
             Stream<Tuple> result = query.getResultStream();
             return result.map(entry -> {
                 ObjectNode obj = mapper.createObjectNode();
@@ -112,6 +113,7 @@ public class PullDatabaseService {
                 log.debug(INFO_MESSAGE, "10021", "emitting row: %s".formatted(obj.toPrettyString()));
                 return obj;
             });
+            
         }
     
   
