@@ -34,6 +34,9 @@ import java.util.Map;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public final @Data class PushDataPayload implements Payload{
 
+    @JsonProperty("schema")
+    private String schema;
+
     @JsonProperty("table")
     private String table;
 
@@ -44,9 +47,12 @@ public final @Data class PushDataPayload implements Payload{
     private Map<String, ValueNode> conditions;
 
     @JsonCreator
-    public PushDataPayload(  @JsonProperty("table") @NonNull String table,
-                             @JsonProperty("row") Map<String, ValueNode> row,
-                             @JsonProperty("conditions") Map<String, ValueNode> conditions){
+    public PushDataPayload(  
+                            @JsonProperty("schema") String schema,
+                            @JsonProperty("table") @NonNull String table,
+                            @JsonProperty("row") Map<String, ValueNode> row,
+                            @JsonProperty("conditions") Map<String, ValueNode> conditions){
+        this.schema=schema;
         this.table=table;
         this.row=row;
         this.conditions=conditions;

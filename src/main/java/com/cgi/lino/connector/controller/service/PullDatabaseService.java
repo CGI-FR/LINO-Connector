@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.ValueNode;
 
 import jakarta.persistence.EntityManagerFactory;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.Query;
 import jakarta.persistence.Tuple;
 import lombok.Getter;
@@ -97,6 +98,7 @@ public class PullDatabaseService {
             String querySql = accessor.getNativeQuerySelect(selectColumns, whereColumns.keySet(), andWhere, limit);
             log.info(INFO_MESSAGE, "20023", "Pull %s - %s".formatted(accessor.getTableNameFull(), querySql));
             Query query = entityManagerFactory.createEntityManager().createNativeQuery(querySql, Tuple.class);
+            //query.setLockMode(LockModeType.READ);
             for (Map.Entry<String,Object> entry : values.entrySet()) {
                 query.setParameter(entry.getKey(), entry.getValue());
             }

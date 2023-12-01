@@ -19,6 +19,7 @@ package com.cgi.lino.connector.controller.service.ws;
 import com.fasterxml.jackson.databind.node.ValueNode;
 
 import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import jakarta.persistence.Query;
 import jakarta.transaction.HeuristicMixedException;
 import jakarta.transaction.HeuristicRollbackException;
@@ -101,18 +102,17 @@ public class PushDataWorker {
      */
     private void executeTableQuery(String query) {
         Query nativeQuery = em.createNativeQuery(query);
+        //nativeQuery.setLockMode(LockModeType.WRITE);
         nativeQuery.executeUpdate();
     }
 
     public void commit() throws HeuristicRollbackException, SystemException, HeuristicMixedException, NotSupportedException {
         // commit all changes
-        this.em.joinTransaction();
         this.em.getTransaction().commit();
         this.em.getTransaction().begin();;
     }
 
     public void close() throws HeuristicRollbackException, SystemException, HeuristicMixedException, NotSupportedException {
-        this.em.joinTransaction();
         if (this.em.getTransaction().isActive()) {
             this.em.getTransaction().commit();
         }
@@ -131,12 +131,13 @@ public class PushDataWorker {
 
     public int pushData(String tableName, Map<String, ValueNode> fieldNames, Map<String, ValueNode> whereFieldNames)
             throws ParseException, SystemException {
-        this.em.joinTransaction();
         TableAccessor accessor = tables.get(tableName);
         if (this.query == null) {
             // if query is null, then create it
             this.query = createQuery(tableName, fieldNames, whereFieldNames);
+           // this.query.setLockMode(LockModeType.WRITE);
         }
+                
         this.setParameters(accessor, query, fieldNames);
         this.setParameters(accessor, query, whereFieldNames);
 
